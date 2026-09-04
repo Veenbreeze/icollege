@@ -1,30 +1,38 @@
-iCollege
-Initial workspace for the iCollege mobile application and API.
-Structure
+# iCollege
 
-frontend/ - Expo / React Native mobile application
-backend/  - Node.js / Express REST API
-reqs/  - Product requirements and design references
+> Your Campus. Your Community. Your Future.
 
-Run locally
+iCollege is a student-centered digital ecosystem. This repository contains the Phase-1 Expo mobile UI and a Node.js API starter.
 
-Install dependencies from the repository root:
+## Workspace structure
 
-powershell
+- `frontend/` - Expo SDK 57 React Native application using Expo Router and TypeScript.
+- `backend/` - Node.js / Express API.
+- `reqs/` - Local requirements and UI references; excluded from Git.
+
+## Run locally
+
+Install dependencies for each application:
+
+```bash
 npm --prefix frontend install
 npm --prefix backend install
-
+```
 
 Start the mobile app:
 
-powershell
+```bash
 npm run frontend
+```
 
+Start the API in another terminal:
 
-Start the API in a second terminal:
-
-powershell
+```bash
 npm run backend
+```
 
+The API health endpoint is `GET http://localhost:4000/api/health`.
 
-The API listens on `http://localhost:4000` and exposes `GET /api/health`.
+## Mobile app
+
+The mobile UI includes dashboard, timetable, chamber/community, create, messages, profile, authentication, exams, notices, documents, career, AI, and related routes. It currently uses local mock data from `frontend/src/data/mock.ts`.
