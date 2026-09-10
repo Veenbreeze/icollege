@@ -33,3 +33,6 @@ android/
 
 # Supplied requirements and visual references (kept local only)
 reqs/
+
+# Local uploads storage
+backend/uploads/
