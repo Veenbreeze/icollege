@@ -1,18 +1,35 @@
-# Dependencies
+# Local tool configuration
+.claude/
+
+# Dependencies and build output
 node_modules/
-frontend/node_modules/
-backend/node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
 
-# Build output
-frontend/.expo/
-frontend/dist/
-
-# Environment files
+# Environment files and logs
 .env
+.env*.local
 *.local
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 
-# Logs
-npm-debug.log*
+# Native and platform artifacts
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+.DS_Store
+*.pem
+*.tsbuildinfo
+ios/
+android/
 
 # Supplied requirements and visual references (kept local only)
 reqs/

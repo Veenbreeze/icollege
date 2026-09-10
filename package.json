@@ -1,6 +1,6 @@
 {
-  "name": "icollege",
-  "version": "0.1.0",
+  "name": "icollege-workspace",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "frontend": "npm --prefix frontend run start",
