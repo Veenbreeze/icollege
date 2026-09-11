@@ -40,7 +40,9 @@ export default function CreatePostScreen() {
       form.append('body', body.trim());
       if (image) await appendFilePart(form, 'image', image, { fallbackName: 'photo.jpg', fallbackType: 'image/jpeg' });
       await createPost(activeSlug, form);
-      router.back();
+      // Go back if we came from somewhere; otherwise land on the chamber so the new post is visible.
+      if (router.canGoBack()) router.back();
+      else router.replace(`/chamber/${activeSlug}`);
     } catch (e) {
       Alert.alert('Could not post', e.message ?? 'Something went wrong');
     } finally {

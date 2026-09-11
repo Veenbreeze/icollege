@@ -51,7 +51,8 @@ export default function EditProfileScreen() {
     setSaving(true);
     try {
       await updateProfile({ fullName: fullName.trim(), username: username.trim(), email: email.trim(), phone: phone.trim() });
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/profile');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
     } finally {

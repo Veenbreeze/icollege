@@ -35,7 +35,8 @@ export default function CreateReelScreen() {
         fallbackType: isVideo ? 'video/mp4' : 'image/jpeg',
       });
       await createReel(form);
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/reels');
     } catch (e) {
       Alert.alert('Could not post reel', e.message ?? 'Something went wrong');
     } finally {

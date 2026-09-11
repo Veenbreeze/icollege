@@ -29,7 +29,8 @@ export default function CreateEventScreen() {
         eventTime: eventTime.trim(),
         venue: venue.trim(),
       });
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/clubs');
     } catch (e) {
       Alert.alert('Could not create event', e.message ?? 'Something went wrong');
     } finally {
