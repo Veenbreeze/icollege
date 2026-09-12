@@ -26,11 +26,11 @@ const EXAM_TYPES = ['Final', 'Mid-Semester', 'CAT / Test', 'Supplementary'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /** Chip row for picking one value from a list. */
-function ChipRow({ options, value, onChange, valueOf }) {
+function ChipRow({ options, value, onChange, getValue }) {
   return (
     <View style={styles.chipRow}>
       {options.map((opt, i) => {
-        const v = valueOf ? valueOf(opt, i) : opt;
+        const v = getValue ? getValue(opt, i) : opt;
         const active = value === v;
         return (
           <Pressable key={String(v)} style={[styles.chip, active && styles.chipActive]} onPress={() => onChange(v)}>
@@ -129,7 +129,7 @@ export function ManagePanel() {
         <ChipRow
           options={courseList.map((c) => c.code)}
           value={f.courseId}
-          valueOf={(_, i) => courseList[i].id}
+          getValue={(_, i) => courseList[i].id}
           onChange={(v) => set('courseId', v)}
         />
       )}
@@ -184,7 +184,7 @@ export function ManagePanel() {
           <>
             <CoursePicker />
             <Text style={styles.label}>Day</Text>
-            <ChipRow options={DAYS} value={f.dayOfWeek} valueOf={(_, i) => i} onChange={(v) => set('dayOfWeek', v)} />
+            <ChipRow options={DAYS} value={f.dayOfWeek} getValue={(_, i) => i} onChange={(v) => set('dayOfWeek', v)} />
             <Field label="Start time" placeholder="08:00" value={f.startTime} onChangeText={(v) => set('startTime', v)} />
             <Field label="End time" placeholder="10:00" value={f.endTime} onChangeText={(v) => set('endTime', v)} />
             <Field label="Room" placeholder="Block C, Room C301" value={f.room} onChangeText={(v) => set('room', v)} />
