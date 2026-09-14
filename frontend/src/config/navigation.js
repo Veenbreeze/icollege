@@ -34,6 +34,16 @@ export const NAV_ITEMS = [
     showInQuickActions: true,
   },
   {
+    key: 'activity',
+    label: 'Activity',
+    icon: 'heart-outline',
+    colorKey: 'red',
+    route: '/notifications',
+    badge: true,
+    showInDrawer: true,
+    showInQuickActions: true,
+  },
+  {
     key: 'documents',
     label: 'My Documents',
     drawerLabel: 'iVault',

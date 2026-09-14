@@ -39,3 +39,6 @@ export function togglePostLike(postId) {
     method: 'POST',
   });
 }
+export function fetchMyPosts() {
+  return apiFetch('/api/community/users/me/posts');
+}

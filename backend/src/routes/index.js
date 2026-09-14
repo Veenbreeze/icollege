@@ -3,6 +3,7 @@ import { authRouter } from './auth.js';
 import { academicRouter } from './academic.js';
 import { documentsRouter } from './documents.js';
 import { communityRouter } from './community.js';
+import { notificationsRouter } from './notifications.js';
 import { chatRouter } from './chat.js';
 import { clubsRouter } from './clubs.js';
 import { reelsRouter } from './reels.js';
@@ -21,6 +22,7 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use(academicRouter); // owns /timetable, /exams, /notices
 apiRouter.use('/documents', documentsRouter);
 apiRouter.use('/community', communityRouter);
+apiRouter.use('/notifications', notificationsRouter);
 apiRouter.use('/chat', chatRouter);
 apiRouter.use(clubsRouter); // owns /clubs, /events
 apiRouter.use(reelsRouter); // owns /stories, /reels

@@ -1,5 +1,6 @@
 import { db } from '../db/pool.js';
 import { toggleRow } from '../db/queryHelpers.js';
+import { notifyOwner } from './notificationsService.js';
 
 /** Like counts for a batch of targets, e.g. `{ target_type: 'post' }`. */
 export async function getLikeCountMap(targetType, targetIds) {
@@ -25,5 +26,6 @@ export async function getUserLikedSet(userId, targetType, targetIds) {
 
 export async function toggleLike(userId, targetType, targetId) {
   const liked = await toggleRow('likes', { user_id: userId, target_type: targetType, target_id: targetId });
+  if (liked) await notifyOwner(targetType, targetId, userId, 'like');
   return { liked };
 }
