@@ -26,7 +26,8 @@ export default function CreateProjectScreen() {
         skills: skills.split(',').map((s) => s.trim()).filter(Boolean),
         neededCount: Number(neededCount) || 0,
       });
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/career');
     } catch (e) {
       Alert.alert('Could not create project', e.message ?? 'Something went wrong');
     } finally {

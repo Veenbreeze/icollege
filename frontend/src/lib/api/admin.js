@@ -35,6 +35,12 @@ export function resolveTimetableChangeRequest(id, status, adminNote) {
 export function createNotice(data) {
   return apiFetch('/api/admin/notices', { method: 'POST', body: data });
 }
+export function createExam(data) {
+  return apiFetch('/api/admin/exams', { method: 'POST', body: data });
+}
+export function createTimetableSlot(data) {
+  return apiFetch('/api/admin/timetable-slots', { method: 'POST', body: data });
+}
 export function assignClubOwner(clubId, ownerId) {
   return apiFetch(`/api/admin/clubs/${clubId}/owner`, { method: 'PATCH', body: { ownerId } });
 }

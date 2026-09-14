@@ -9,9 +9,11 @@ import { Pill } from '@/components/ui/Pill';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { fetchStats, fetchUsers, updateUserStatus, fetchTimetableChangeRequests, resolveTimetableChangeRequest } from '@/lib/api/admin';
+import { ManagePanel } from '@/components/admin/ManagePanel';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
+  { key: 'manage', label: 'Manage' },
   { key: 'approvals', label: 'Approvals' },
   { key: 'requests', label: 'Timetable Requests' },
 ];
@@ -125,6 +127,8 @@ export default function AdminConsoleScreen() {
             ))
           )
         )}
+
+        {tab === 'manage' && <ManagePanel />}
       </ScrollView>
     </SafeAreaView>
   );

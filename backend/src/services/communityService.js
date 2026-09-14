@@ -1,6 +1,7 @@
 import { db } from '../db/pool.js';
 import { countByColumn, pluckSet, toggleRow } from '../db/queryHelpers.js';
 import { getLikeCountMap, getUserLikedSet } from './likesService.js';
+import { notifyMany, notifyOwner } from './notificationsService.js';
 import { initialsOf } from '../utils/names.js';
 import { publicUrlFor } from '../middleware/upload.js';
 
@@ -98,6 +99,17 @@ export async function listPosts(slug, userId, tag) {
   return attachPostMeta(rows, userId);
 }
 
+export async function listPostsByAuthor(authorId, viewerId) {
+  const rows = await db('posts')
+    .join('users', 'users.id', 'posts.author_id')
+    .join('chambers', 'chambers.id', 'posts.chamber_id')
+    .where('posts.author_id', authorId)
+    .select('posts.*', 'users.full_name as author_name', 'users.year as author_year', 'chambers.name as chamber_name')
+    .orderBy('posts.created_at', 'desc');
+
+  return attachPostMeta(rows, viewerId);
+}
+
 export async function createPost(slug, authorId, { title, body, tag, mediaPath }) {
   const chamber = await findChamberBySlug(slug);
   if (!chamber) return null;
@@ -110,6 +122,10 @@ export async function createPost(slug, authorId, { title, body, tag, mediaPath }
       .select('posts.*', 'users.full_name as author_name', 'users.year as author_year', db.raw('? as chamber_name', [chamber.name])),
     authorId,
   );
+
+  const memberIds = await db('chamber_members').where({ chamber_id: chamber.id }).pluck('user_id');
+  await notifyMany(memberIds, authorId, 'new_post', 'post', row.id);
+
   return post;
 }
 
@@ -148,6 +164,7 @@ export async function listComments(postId) {
 
 export async function createComment(postId, authorId, body) {
   const [row] = await db('comments').insert({ post_id: postId, author_id: authorId, body }).returning('id');
+  await notifyOwner('post', postId, authorId, 'comment');
   const all = await listComments(postId);
   return all.find((c) => c.id === `comment-${row.id}`);
 }

@@ -9,6 +9,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Button } from '@/components/ui/Button';
 import { createStory } from '@/lib/api/reels';
 import { appendFilePart } from '@/lib/media';
+import { VideoPlayer } from '@/components/media/VideoPlayer';
 
 export default function CreateStoryScreen() {
   const router = useRouter();
@@ -33,7 +34,8 @@ export default function CreateStoryScreen() {
         fallbackType: isVideo ? 'video/mp4' : 'image/jpeg',
       });
       await createStory(form);
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/reels');
     } catch (e) {
       Alert.alert('Could not post story', e.message ?? 'Something went wrong');
     } finally {
@@ -48,10 +50,7 @@ export default function CreateStoryScreen() {
         {media ? (
           <View style={styles.previewWrap}>
             {media.type === 'video' ? (
-              <View style={[styles.preview, styles.videoPlaceholder]}>
-                <Ionicons name="play-circle" size={48} color={colors.white} />
-                <Text style={styles.videoPlaceholderLabel}>{media.fileName ?? 'Video selected'}</Text>
-              </View>
+              <VideoPlayer uri={media.uri} isActive muted loop style={styles.preview} />
             ) : (
               <Image source={{ uri: media.uri }} style={styles.preview} />
             )}
@@ -84,7 +83,5 @@ const styles = themedStyles((colors) => ({
   pickLabel: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   previewWrap: { borderRadius: radii.lg, overflow: 'hidden' },
   preview: { width: '100%', height: 320, backgroundColor: '#000' },
-  videoPlaceholder: { alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  videoPlaceholderLabel: { fontSize: 13, color: colors.white, fontWeight: '600' },
   removeMedia: { position: 'absolute', top: spacing.sm, right: spacing.sm, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: radii.pill, padding: 6 },
 }));
