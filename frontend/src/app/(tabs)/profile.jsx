@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -5,11 +6,19 @@ import { useRouter } from 'expo-router';
 import { colors, radii, spacing, shadow, themedStyles, useTheme } from '@/theme';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
+import { ThumbnailGrid } from '@/components/media/ThumbnailGrid';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { initialsOf } from '@/lib/initials';
 import { useApi } from '@/hooks/useApi';
 import { fetchPortfolio } from '@/lib/api/career';
+import { fetchMyPosts } from '@/lib/api/community';
+import { fetchMyReels } from '@/lib/api/reels';
 import { resolveMediaUrl } from '@/lib/api/client';
+
+const PROFILE_TABS = [
+  { key: 'posts', label: 'Posts', icon: 'grid-outline' },
+  { key: 'reels', label: 'Reels', icon: 'play-circle-outline' },
+];
 const APPEARANCE = [
   {
     key: 'system',
@@ -76,6 +85,9 @@ export default function ProfileScreen() {
   const { preference, setPreference } = useTheme();
   const { user, logout } = useAuth();
   const { data: portfolio } = useApi(fetchPortfolio);
+  const { data: myPosts } = useApi(fetchMyPosts);
+  const { data: myReels } = useApi(fetchMyReels);
+  const [activeTab, setActiveTab] = useState('posts');
   if (!user) return null;
   const stats = [
     {
@@ -149,6 +161,32 @@ export default function ProfileScreen() {
             </View>
           ))}
         </Card>
+
+        {/* My posts / reels */}
+        <View style={styles.tabBar}>
+          {PROFILE_TABS.map((t) => {
+            const active = activeTab === t.key;
+            return (
+              <Pressable key={t.key} style={[styles.tabItem, active && styles.tabItemActive]} onPress={() => setActiveTab(t.key)}>
+                <Ionicons name={t.icon} size={18} color={active ? colors.primary : colors.textMuted} />
+                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {activeTab === 'posts' ? (
+          <ThumbnailGrid
+            items={myPosts ?? []}
+            emptyLabel="You haven't posted anything yet"
+            onPressItem={(item) => router.push(`/post/${item.id}`)}
+          />
+        ) : (
+          <ThumbnailGrid
+            items={myReels ?? []}
+            emptyLabel="You haven't shared any reels yet"
+            onPressItem={(item) => router.push({ pathname: '/reels', params: { focusId: item.id } })}
+          />
+        )}
 
         {/* Appearance / Dark mode */}
         <Text style={styles.sectionTitle}>Appearance</Text>
@@ -326,6 +364,34 @@ const styles = themedStyles((colors) => ({
     color: colors.text,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.xl,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tabItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabItemActive: {
+    borderBottomColor: colors.primary,
+  },
+  tabLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  tabLabelActive: {
+    color: colors.primary,
   },
   appearance: {
     flexDirection: 'row',

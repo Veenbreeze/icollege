@@ -2,12 +2,12 @@ import { createContext, useContext, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { colors as liveColors, palettes, setActiveMode } from './colors';
 
-/** User preference: follow the OS, or force light/dark. */
+/** User preference: follow the OS, or force light/dark. Defaults to light. */
 
 const ThemeContext = createContext(null);
 export function ThemeProvider({ children }) {
   const system = useColorScheme(); // 'light' | 'dark' | null
-  const [preference, setPreference] = useState('system');
+  const [preference, setPreference] = useState('light');
   const mode = preference === 'system' ? (system === 'dark' ? 'dark' : 'light') : preference;
 
   // Point the module-level proxies at the resolved theme *before* children render.
