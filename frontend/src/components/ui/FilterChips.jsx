@@ -31,17 +31,21 @@ export function FilterChips({ options, value, onChange, style }) {
 }
 const styles = themedStyles((colors) => ({
   row: {
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     gap: spacing.sm,
   },
   chip: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   chipOn: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   chipOff: {
     backgroundColor: colors.surface,

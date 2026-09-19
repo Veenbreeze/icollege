@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { fetchTodayTimetable, fetchNotices } from '@/lib/api/academic';
 import { fetchChambers } from '@/lib/api/community';
+import { fetchUnreadCount } from '@/lib/api/notifications';
 import { initialsOf, greetingForNow } from '@/lib/initials';
 import { resolveMediaUrl } from '@/lib/api/client';
 import { resolveAccent } from '@/lib/colorKey';
@@ -30,6 +31,8 @@ export default function HomeScreen() {
   const { data: today, isLoading: loadingTimetable } = useApi(fetchTodayTimetable);
   const { data: notices, isLoading: loadingNotices } = useApi(fetchNotices);
   const { data: chambers } = useApi(fetchChambers);
+  const { data: unreadData } = useApi(fetchUnreadCount);
+  const notifUnread = unreadData?.count ?? 0;
   if (!user) return null;
   if (user.role !== 'student') return <RoleHome />;
   const classes = today?.classes ?? [];
@@ -62,11 +65,11 @@ export default function HomeScreen() {
             <Text style={styles.logoTagline}>Your Campus. Your Future.</Text>
           </View>
           <View style={styles.headerRight}>
-            <Pressable onPress={() => router.push('/notices')} hitSlop={6}>
+            <Pressable onPress={() => router.push('/notifications')} hitSlop={6}>
               <Ionicons name="notifications-outline" size={24} color={colors.text} />
-              {unreadNotices.length > 0 && (
+              {notifUnread > 0 && (
                 <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>{unreadNotices.length}</Text>
+                  <Text style={styles.bellBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</Text>
                 </View>
               )}
             </Pressable>

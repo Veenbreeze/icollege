@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -58,7 +58,7 @@ export default function PostScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Post</Text>
@@ -119,6 +119,9 @@ export default function PostScreen() {
 
           <Text style={styles.title}>{post.title}</Text>
           {post.body && <Text style={styles.body}>{post.body}</Text>}
+          {post.mediaUrl && (
+            <Image source={{ uri: resolveMediaUrl(post.mediaUrl) }} style={styles.postImage} resizeMode="cover" />
+          )}
 
           {/* Actions */}
           <View style={styles.actions}>
@@ -265,6 +268,13 @@ const styles = themedStyles((colors) => ({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     lineHeight: 21,
+  },
+  postImage: {
+    width: '100%',
+    height: 240,
+    borderRadius: radii.md,
+    marginTop: spacing.md,
+    backgroundColor: colors.surfaceMuted,
   },
   actions: {
     flexDirection: 'row',

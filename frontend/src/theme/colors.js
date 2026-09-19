@@ -9,29 +9,46 @@ import { StyleSheet } from 'react-native';
  * StyleSheet per theme on demand — so screens stay declarative.
  */
 
-/* Brand + accents — identical in both themes. */
+/* Brand + accent HUES — identical in both themes. */
 const accents = {
   primary: '#6C4CE0',
   primaryDark: '#5638C4',
   primaryLight: '#8B6DF0',
-  primarySoft: '#EFEBFB',
   blue: '#2F80ED',
-  blueSoft: '#E7F0FD',
   green: '#27AE60',
-  greenSoft: '#E4F6EC',
   orange: '#F2994A',
-  orangeSoft: '#FDEEDF',
   red: '#EB5757',
-  redSoft: '#FDE7E7',
   yellow: '#F2C94C',
-  yellowSoft: '#FCF4DA',
   white: '#FFFFFF',
   // Bezel-like frame the whole app sits inset within — deliberately the same
   // in both themes so it reads as the "device edge", not a themed surface.
   shell: '#101018',
 };
+
+// Soft accent tints are THEME-AWARE: light pastels in light mode, dark
+// accent-tinted surfaces in dark mode. This keeps any text/icon placed on a
+// soft background readable in both themes (light text was invisible on the
+// old light pastels in dark mode).
+const lightSofts = {
+  primarySoft: '#EFEBFB',
+  blueSoft: '#E7F0FD',
+  greenSoft: '#E4F6EC',
+  orangeSoft: '#FDEEDF',
+  redSoft: '#FDE7E7',
+  yellowSoft: '#FCF4DA',
+};
+const darkSofts = {
+  primarySoft: '#2E2748',
+  blueSoft: '#1E2C44',
+  greenSoft: '#173328',
+  orangeSoft: '#3B2E1C',
+  redSoft: '#3B2226',
+  yellowSoft: '#39321C',
+};
+
 export const lightColors = {
   ...accents,
+  ...lightSofts,
   bg: '#F6F6FB',
   surface: '#FFFFFF',
   surfaceMuted: '#F1F1F6',
@@ -47,6 +64,7 @@ export const lightColors = {
 };
 export const darkColors = {
   ...accents,
+  ...darkSofts,
   // Kept noticeably lighter than a typical near-black dark theme so text
   // and card boundaries stay easy to read.
   bg: '#1E1E27',

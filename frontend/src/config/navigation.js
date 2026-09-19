@@ -114,9 +114,9 @@ export const NAV_ITEMS = [
     label: 'Library',
     icon: 'book-outline',
     colorKey: 'blue',
+    route: '/library',
     showInDrawer: true,
     showInQuickActions: true,
-    soon: true,
   },
   {
     key: 'settings',

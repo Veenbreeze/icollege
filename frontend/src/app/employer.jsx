@@ -8,7 +8,12 @@ import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { Button } from '@/components/ui/Button';
 import { useApi } from '@/hooks/useApi';
-import { fetchMyCompany, fetchMyOpportunities, postOpportunity, postChallenge } from '@/lib/api/employer';
+import { fetchMyCompany, fetchMyOpportunities, postOpportunity, postChallenge, searchTalent } from '@/lib/api/employer';
+
+function initials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
+}
 
 export default function EmployerConsoleScreen() {
   const { data: company, isLoading: loadingCompany } = useApi(fetchMyCompany);
@@ -18,6 +23,22 @@ export default function EmployerConsoleScreen() {
   const [category, setCategory] = useState('Internships');
   const [compTitle, setCompTitle] = useState('');
   const [busy, setBusy] = useState(false);
+  const [skill, setSkill] = useState('');
+  const [programme, setProgramme] = useState('');
+  const [talent, setTalent] = useState(null); // null = not searched yet, [] = no results
+  const [searching, setSearching] = useState(false);
+
+  async function findTalent() {
+    setSearching(true);
+    try {
+      const results = await searchTalent({ skill: skill.trim() || undefined, programme: programme.trim() || undefined });
+      setTalent(results ?? []);
+    } catch (e) {
+      Alert.alert('Search failed', e.message);
+    } finally {
+      setSearching(false);
+    }
+  }
 
   async function createPosting() {
     if (!role.trim()) return Alert.alert('Add a role title');
@@ -65,6 +86,39 @@ export default function EmployerConsoleScreen() {
         )}
 
         <Card style={styles.card}>
+          <Text style={styles.cardTitle}>Find Student Talent</Text>
+          <Text style={styles.cardHint}>Search students open to opportunities by skill and programme.</Text>
+          <TextInput style={styles.input} placeholder="Skill (e.g. React, Python)" placeholderTextColor={colors.textMuted} value={skill} onChangeText={setSkill} />
+          <TextInput style={styles.input} placeholder="Programme (e.g. Computer Science)" placeholderTextColor={colors.textMuted} value={programme} onChangeText={setProgramme} />
+          <Button label={searching ? 'Searching…' : 'Search Talent'} icon="search-outline" onPress={findTalent} style={{ marginTop: spacing.md }} />
+
+          {searching && <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />}
+          {talent !== null && !searching && (
+            talent.length === 0 ? (
+              <Text style={[styles.empty, { marginTop: spacing.md }]}>No students match that search.</Text>
+            ) : (
+              <View style={{ marginTop: spacing.md }}>
+                <Text style={styles.resultCount}>{talent.length} student{talent.length === 1 ? '' : 's'} found</Text>
+                {talent.map((s) => (
+                  <View key={s.id} style={styles.talentRow}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{initials(s.full_name)}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.talentName}>{s.full_name}</Text>
+                      <Text style={styles.talentMeta} numberOfLines={1}>
+                        {[s.headline, s.programme, s.year].filter(Boolean).join(' · ')}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  </View>
+                ))}
+              </View>
+            )
+          )}
+        </Card>
+
+        <Card style={styles.card}>
           <Text style={styles.cardTitle}>Post a Job / Internship</Text>
           <TextInput style={styles.input} placeholder="Role title" placeholderTextColor={colors.textMuted} value={role} onChangeText={setRole} />
           <Button label={busy ? 'Posting…' : 'Post Opportunity'} color={colors.orange} onPress={createPosting} style={{ marginTop: spacing.md }} />
@@ -100,6 +154,13 @@ const styles = themedStyles((colors) => ({
   content: { padding: spacing.lg, paddingBottom: 120 },
   card: { marginBottom: spacing.lg },
   cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
+  cardHint: { fontSize: 12.5, color: colors.textMuted, marginBottom: spacing.md },
+  resultCount: { fontSize: 12.5, color: colors.textSecondary, fontWeight: '600', marginBottom: spacing.sm },
+  talentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  talentName: { fontSize: 14, fontWeight: '700', color: colors.text },
+  talentMeta: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
   companyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   companyDesc: { fontSize: 12.5, color: colors.textSecondary, marginTop: 4 },
   input: {

@@ -6,9 +6,15 @@ import { colors, spacing, themedStyles } from '@/theme';
  * shape shared by nearly every secondary screen in the app. */
 export function ScreenHeader({ title, subtitle, onBack, right, titleSize = 24 }) {
   const router = useRouter();
+  // Go back if there's history; otherwise fall back to the home tabs so the
+  // arrow never does "nothing" (e.g. on web, or when a screen is opened directly).
+  const handleBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)');
+  };
   return (
     <View style={styles.header}>
-      <Pressable onPress={onBack ?? (() => router.back())} hitSlop={8}>
+      <Pressable onPress={onBack ?? handleBack} hitSlop={8}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
       </Pressable>
       <View

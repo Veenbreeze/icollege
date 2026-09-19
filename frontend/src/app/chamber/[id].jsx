@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -82,7 +82,7 @@ export default function ChamberScreen() {
       >
         {/* Top bar */}
         <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} hitSlop={8}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
         </View>
@@ -331,6 +331,9 @@ function PostCard({ post: p, themeColor, themeSoft, onOpen, onLike }) {
         </View>
         <Text style={styles.postTitle}>{p.title}</Text>
         {p.body && <Text style={styles.postBody}>{p.body}</Text>}
+        {p.mediaUrl && (
+          <Image source={{ uri: resolveMediaUrl(p.mediaUrl) }} style={styles.postImage} resizeMode="cover" />
+        )}
         <View style={styles.postFooter}>
           <Pressable style={styles.react} onPress={onLike} hitSlop={6}>
             <Ionicons name={p.likedByMe ? 'thumbs-up' : 'thumbs-up-outline'} size={16} color={themeColor} />
@@ -558,6 +561,13 @@ const styles = themedStyles((colors) => ({
     color: colors.textSecondary,
     marginTop: 4,
     lineHeight: 19,
+  },
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: radii.md,
+    marginTop: spacing.md,
+    backgroundColor: colors.surfaceMuted,
   },
   postFooter: {
     flexDirection: 'row',

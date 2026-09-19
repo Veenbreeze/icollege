@@ -23,19 +23,21 @@ a dedicated Web Admin Portal can come later.
 - **BE:** `POST/PATCH/DELETE` for notices, exams, timetable slots, courses, users. (Tables already exist; `POST /api/admin/notices` + courses endpoints already stubbed.)
 - **FE:** Admin console → **Manage** tab: create Notice / Exam / Timetable slot (+ lists). *(Cycle 1, in progress.)*
 
-### 2. Notifications + Rule Engine (§9/§26)
-- **BE:** `device_tokens` table + register endpoint; `sendPush()` via Expo Push API; rule engine (lecture cancel/postpone, notice publish → notify affected students → push).
-- **FE:** register Expo push token on login; handle tap → deep-link.
+### 2. Notifications + Rule Engine (§9/§26)  🟡 BACKEND DONE (2026-09-19), FE pending
+- **BE:** ✅ `device_tokens` + `notifications` tables (migration 0014); `notificationService` (rule engine + best-effort Expo push); `/api/notifications` routes; hooks on admin/lecturer notice publish + lecture cancel/move. Verified end-to-end.
+- **FE:** ⬜ register Expo push token on login; notifications feed screen + bell-icon unread badge; tap → deep-link.
 
-### 3. Employer talent search / portfolio review (§17)
-- **BE:** `GET /api/employer/talent?skills=&programme=&year=` (respect privacy) + `GET /api/employer/talent/:id`.
-- **FE:** Employer console → **Find Talent** (filters + results → read-only portfolio).
+### 3. Employer talent search / portfolio review (§17)  ✅ DONE (2026-09-13)
+- **BE:** `GET /api/employer/talent-search?skill=&programme=` — already existed.
+- **FE:** Employer console → **Find Student Talent** card (skill + programme search, results list). Built & verified.
+- Follow-up (later): tapping a result → read-only portfolio detail.
 
 ## 🟠 HIGH
 
-### 4. iLibrary + lecturer material upload (§16)
-- **BE:** `library_materials` table (University→Faculty→Programme→Year→Semester→Course); upload + browse/download endpoints.
-- **FE:** lecturer/admin **Upload Material**; student **iLibrary** browse screen (replaces the "Soon" tile).
+### 4. iLibrary + lecturer material upload (§16)  ✅ DONE (2026-09-14)
+- **BE:** lecturer upload (`POST /api/lecturer/materials`) existed; **added** `GET /api/library` (browse). Uses `documents` table, visibility='course'.
+- **FE:** Lecturer Console **Upload Course Material** card; student **iLibrary** screen; Library tile un-"Soon"'d. Verified end-to-end.
+- Follow-up (later): full Faculty→Programme→Year→Semester hierarchy + scope to enrolled courses.
 
 ### 5. Content moderation + privacy (§24) — before public launch
 - **BE:** `reports` table + report/moderation endpoints; profile privacy flags.

@@ -1,6 +1,7 @@
 import { db } from '../db/pool.js';
 import { toPublicUser } from './authService.js';
 import { ROLES } from '../utils/roles.js';
+import * as notificationService from './notificationService.js';
 
 export async function listUsers({ status, role } = {}) {
   let query = db('users').select('*').orderBy('created_at', 'desc');
@@ -128,6 +129,14 @@ export async function createNotice(data) {
   const [row] = await db('notices').insert({
     title: data.title, body: data.body, category: data.category, priority: data.priority || 'Normal', icon: data.icon, color_key: data.colorKey,
   }).returning('*');
+  // Rule engine: publishing a notice alerts every active student.
+  const studentIds = await notificationService.activeStudentIds();
+  await notificationService.notifyUsers(studentIds, {
+    title: `New notice: ${row.title}`,
+    body: row.body,
+    type: 'notice',
+    deepLink: '/notices',
+  });
   return row;
 }
 

@@ -69,23 +69,73 @@ body: {
 
 ---
 
-## Cycle 2 — Notifications + Employer talent  🔴 (spec next)
+## Cycle 2 — Notifications + Employer talent
 
-```
-POST /api/notifications/register-token   body: { token: string, platform: "ios"|"android"|"web" }
-# Rule engine (server-side): on lecture cancel/postpone & notice publish →
-# create per-student notifications and send Expo push to their registered tokens.
+### Employer talent search  ✅ DONE (backend + frontend, verified 2026-09-13)
+Backend `GET /api/employer/talent-search?skill=&programme=` already exists
+(`employerService.searchTalent`), returns students with `open_to_opportunities=true`:
+`[{ id, full_name, programme, year, headline, location }]`. The employer console
+"Find Student Talent" card calls it. **No backend work needed.**
 
-GET  /api/employer/talent?skills=react,node&programme=&year=   → [{ id, fullName, programme, year, skills[], successScore, avatarUrl }]
-GET  /api/employer/talent/:id                                  → full public portfolio (respect privacy flags)
+### Push notifications + rule engine  ✅ BACKEND DONE (built + verified 2026-09-19)
+Built: migration `0014_notifications.js` (`device_tokens`, `notifications` tables),
+`services/notificationService.js` (rule engine + best-effort Expo push),
+`routes/notifications.js` (mounted at `/notifications`). Rule-engine hooks added to
+`adminService.createNotice`, `lecturerService.createNotice`, and
+`lecturerService.createLectureUpdate` (on cancelled/moved). Verified end-to-end:
+notice publish + lecture cancel → per-student in-app notifications; mark-read + counts work.
 ```
+POST  /api/notifications/register-token   body: { token, platform }  → 204  (upsert)
+GET   /api/notifications                  → [{ id, title, body, type, read, deepLink, createdAt }]
+GET   /api/notifications/unread-count     → { count }
+PATCH /api/notifications/:id/read         → the updated notification
+POST  /api/notifications/read-all         → 204
+```
+Rule engine (no endpoint — hooks existing writes): admin/lecturer notice publish →
+notify all active students (type 'notice', deepLink '/notices'); lecture
+cancelled/moved → notify students (type 'lecture', deepLink '/timetable'). Each
+event inserts per-student `notifications` rows, then fires a best-effort Expo push
+(https://exp.host/--/api/v2/push/send) to any registered `ExponentPushToken`s —
+push failures never break the triggering action. Audience = all active students
+(no per-student enrollment yet; narrow once enrollment exists).
 
-## Cycle 3 — iLibrary  🟠
+**FRONTEND ✅ DONE (in-app, 2026-09-19):** notifications feed screen (`app/notifications.jsx`)
++ client (`lib/api/notifications.js`); home bell icon now opens `/notifications` with a
+live unread badge (`GET /unread-count`); tap a notification → mark read + deep-link.
+**Remaining (needs a native device build):** install `expo-notifications`, obtain the
+Expo push token on login, call `POST /register-token`. On web there is no OS push token,
+so this is a device-only follow-up; the endpoint + `registerPushToken()` client are ready.
+(SMS/email delivery = later, optional.)
+
+## Cycle 3 — iLibrary
+
+### Lecturer upload  ✅ DONE (backend existed, frontend built 2026-09-13)
+`POST /api/lecturer/materials` (multipart: `file` + `courseId`) already exists —
+stores into `documents` with `visibility='course'`, `course_id` set. The Lecturer
+Console "Upload Course Material" card calls it. **No backend work needed.**
+
+### Student browse  ✅ DONE (built + verified end-to-end 2026-09-14)
+`GET /api/library` now exists (`routes/library.js` + `services/libraryService.js`,
+mounted in `routes/index.js`). Verified: lecturer upload → appears in student
+iLibrary grouped by course. Response shape below.
 ```
-GET  /api/library?faculty=&programme=&year=&semester=&courseId=   → [{ id, title, type, courseCode, url, uploadedBy, createdAt }]
-POST /api/library         (lecturer/admin, multipart)  fields: courseId, title, type + file "material"
-GET  /api/library/:id/download
+GET /api/library[?courseId=]
+  # Returns course materials (documents where visibility='course') that the
+  # requesting student can see — join documents→courses for the code/title.
+  → [{
+      id,
+      name,                # documents.name (original filename)
+      type,                # documents.doc_type: "pdf" | "image" | "doc"
+      size,                # human string e.g. "284 KB" (from size_bytes)
+      url,                 # public url for storage_path (publicUrlFor)
+      courseCode,          # courses.code
+      courseTitle,         # courses.title
+      uploadedBy,          # lecturer full_name
+      createdAt
+    }]
 ```
+Optional later: scope to the student's enrolled courses once enrollment exists;
+a `GET /api/library/:id/download` for auth'd streaming.
 
 ## Cycle 4 — Moderation + Privacy  🟠
 ```

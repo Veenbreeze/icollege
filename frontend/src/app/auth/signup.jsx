@@ -80,7 +80,7 @@ export default function SignupScreen() {
         >
           <View style={styles.heroGlowA} />
           <View style={styles.heroGlowB} />
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/auth/login"))} hitSlop={8} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.white} />
           </Pressable>
           <ClaySurface radius={radii.xl} style={styles.logoBadge}>

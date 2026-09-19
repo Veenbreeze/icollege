@@ -2,6 +2,7 @@ import { db } from '../db/pool.js';
 import { publicUrlFor } from '../middleware/upload.js';
 import path from 'node:path';
 import { env } from '../config/env.js';
+import * as notificationService from './notificationService.js';
 
 export async function listMyCourses(lecturerId) {
   const courses = await db('courses').where({ lecturer_id: lecturerId }).orderBy('code');
@@ -23,6 +24,14 @@ export async function createNotice(lecturerId, { title, body, courseId }) {
     icon: 'megaphone-outline',
     color_key: 'primary',
   }).returning('*');
+  // Rule engine: a lecturer announcement alerts every active student.
+  const studentIds = await notificationService.activeStudentIds();
+  await notificationService.notifyUsers(studentIds, {
+    title: course ? `${course.code}: ${row.title}` : `New notice: ${row.title}`,
+    body: row.body,
+    type: 'notice',
+    deepLink: '/notices',
+  });
   return row;
 }
 
@@ -51,12 +60,24 @@ export async function createLectureUpdate(lecturerId, { timetableSlotId, date, s
     .join('courses', 'courses.id', 'timetable_slots.course_id')
     .where('timetable_slots.id', timetableSlotId)
     .andWhere('courses.lecturer_id', lecturerId)
-    .first('timetable_slots.id');
+    .first('timetable_slots.id', 'courses.code as course_code', 'courses.title as course_title');
   if (!slot) return null;
 
   const [row] = await db('lecture_updates').insert({
     timetable_slot_id: timetableSlotId, date, status, note, updated_by: lecturerId,
   }).returning('*');
+
+  // Rule engine: a cancelled/moved lecture alerts students.
+  if (status === 'cancelled' || status === 'moved') {
+    const verb = status === 'cancelled' ? 'cancelled' : 'rescheduled';
+    const studentIds = await notificationService.activeStudentIds();
+    await notificationService.notifyUsers(studentIds, {
+      title: `Lecture ${verb}: ${slot.course_code}`,
+      body: `${slot.course_title} on ${date} has been ${verb}.${note ? ` ${note}` : ''}`,
+      type: 'lecture',
+      deepLink: '/timetable',
+    });
+  }
   return row;
 }
 

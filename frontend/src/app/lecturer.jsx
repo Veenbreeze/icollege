@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { colors, radii, spacing, themedStyles } from '@/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useApi } from '@/hooks/useApi';
-import { fetchMyCourses, postNotice, postLectureUpdate, requestTimetableChange } from '@/lib/api/lecturer';
+import { fetchMyCourses, postNotice, postLectureUpdate, requestTimetableChange, uploadMaterial } from '@/lib/api/lecturer';
+import { appendFilePart } from '@/lib/media';
 
 export default function LecturerConsoleScreen() {
   const { data: courses, isLoading, refetch } = useApi(fetchMyCourses);
@@ -16,6 +18,8 @@ export default function LecturerConsoleScreen() {
   const [noticeBody, setNoticeBody] = useState('');
   const [changeMessage, setChangeMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pickedFile, setPickedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const activeCourse = (courses ?? []).find((c) => c.id === activeCourseId) ?? courses?.[0];
 
@@ -63,6 +67,29 @@ export default function LecturerConsoleScreen() {
     }
   }
 
+  async function pickFile() {
+    const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+    if (!result.canceled && result.assets?.length) setPickedFile(result.assets[0]);
+  }
+
+  async function uploadCourseMaterial() {
+    if (!activeCourse) return Alert.alert('Pick a course first');
+    if (!pickedFile) return Alert.alert('Choose a file to upload');
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('courseId', String(activeCourse.id));
+      await appendFilePart(form, 'file', pickedFile, { fallbackName: 'material', fallbackType: 'application/octet-stream' });
+      await uploadMaterial(form);
+      setPickedFile(null);
+      Alert.alert('Material uploaded', `Students taking ${activeCourse.code} can now access it in the Library.`);
+    } catch (e) {
+      Alert.alert('Upload failed', e.message ?? 'Something went wrong');
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="Lecturer Console" subtitle="Manage your classes" />
@@ -91,6 +118,30 @@ export default function LecturerConsoleScreen() {
               <TextInput style={styles.input} placeholder="Title" placeholderTextColor={colors.textMuted} value={noticeTitle} onChangeText={setNoticeTitle} />
               <TextInput style={[styles.input, styles.textarea]} placeholder="Message" placeholderTextColor={colors.textMuted} value={noticeBody} onChangeText={setNoticeBody} multiline />
               <Button label={busy ? 'Posting…' : 'Post to Students'} onPress={sendNotice} style={{ marginTop: spacing.md }} />
+            </Card>
+
+            <Card style={styles.card}>
+              <Text style={styles.cardTitle}>Upload Course Material</Text>
+              <Text style={styles.uploadHint}>
+                Add notes, slides or past papers for {activeCourse ? activeCourse.code : 'your course'}. Students can read them in iLibrary.
+              </Text>
+              <Pressable style={styles.filePicker} onPress={pickFile}>
+                <Ionicons name={pickedFile ? 'document-attach' : 'cloud-upload-outline'} size={20} color={colors.primary} />
+                <Text style={styles.fileName} numberOfLines={1}>
+                  {pickedFile ? pickedFile.name : 'Choose a file (PDF, doc, image…)'}
+                </Text>
+                {pickedFile && (
+                  <Pressable onPress={() => setPickedFile(null)} hitSlop={8}>
+                    <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                  </Pressable>
+                )}
+              </Pressable>
+              <Button
+                label={uploading ? 'Uploading…' : 'Upload Material'}
+                icon="cloud-upload-outline"
+                onPress={uploadCourseMaterial}
+                style={{ marginTop: spacing.md }}
+              />
             </Card>
 
             <Card style={styles.card}>
@@ -123,4 +174,11 @@ const styles = themedStyles((colors) => ({
   },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
   empty: { color: colors.textMuted, fontSize: 13 },
+  uploadHint: { fontSize: 12.5, color: colors.textMuted, marginBottom: spacing.md, marginTop: -spacing.xs },
+  filePicker: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed', borderRadius: radii.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, backgroundColor: colors.surface,
+  },
+  fileName: { flex: 1, fontSize: 13.5, color: colors.text },
 }));
