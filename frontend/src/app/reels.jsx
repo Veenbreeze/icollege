@@ -1,26 +1,57 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { colors, radii, spacing, themedStyles, useResponsive } from '@/theme';
 import { Avatar } from '@/components/ui/Avatar';
+import { VideoPlayer } from '@/components/media/VideoPlayer';
 import { useApi } from '@/hooks/useApi';
 import { fetchStories, fetchReels, toggleReelLike, shareReel } from '@/lib/api/reels';
 import { resolveAccent } from '@/lib/colorKey';
+import { resolveMediaUrl } from '@/lib/api/client';
 
 const HEADER_HEIGHT = 44; // matches styles.storiesBar.top below
 const STORIES_BAR_HEIGHT = 92; // matches styles.storiesBar.maxHeight below
 
 export default function ReelsScreen() {
   const router = useRouter();
+  const { focusId } = useLocalSearchParams();
   const { height, scale } = useResponsive();
   const insets = useSafeAreaInsets();
   // reel height fills the screen minus the header + stories bar + top safe area
   const reelHeight = height - insets.top - HEADER_HEIGHT - STORIES_BAR_HEIGHT;
   const storyWidth = scale(64);
-  const { data: stories } = useApi(fetchStories);
+  const { data: stories, refetch: refetchStories } = useApi(fetchStories);
   const { data: reels, isLoading, refetch } = useApi(fetchReels);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [muted, setMuted] = useState(true);
+  const scrollRef = useRef(null);
+  const focusedRef = useRef(false);
+
+  // The story viewer marks stories as viewed server-side — re-pull the tray
+  // whenever this screen regains focus so rings reflect the latest state.
+  useFocusEffect(
+    useCallback(() => {
+      refetchStories();
+    }, [refetchStories]),
+  );
+
+  // Deep-linked from a profile grid tile — jump straight to that reel once loaded.
+  useEffect(() => {
+    if (focusedRef.current || !focusId || !reels?.length) return;
+    const index = reels.findIndex((r) => r.id === focusId);
+    if (index === -1) return;
+    focusedRef.current = true;
+    scrollRef.current?.scrollTo({ y: index * reelHeight, animated: false });
+    setActiveIndex(index);
+  }, [focusId, reels, reelHeight]);
+
+  const onStoryPress = (s) => {
+    if (s.mine && s.stories.length === 0) router.push('/create-story');
+    else router.push({ pathname: '/story-viewer', params: { userId: String(s.userId) } });
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header + stories */}
@@ -42,12 +73,13 @@ export default function ReelsScreen() {
       >
         {(stories ?? []).map((s) => {
           const { color } = resolveAccent(s.colorKey);
+          const hasStories = s.stories?.length > 0;
           return (
-            <Pressable key={s.id} style={[styles.story, { width: storyWidth }]} onPress={s.mine ? () => router.push('/create-story') : undefined}>
+            <Pressable key={s.id} style={[styles.story, { width: storyWidth }]} onPress={() => onStoryPress(s)}>
               <View
                 style={[
                   styles.storyRing,
-                  !s.viewed && !s.mine && styles.storyRingActive,
+                  !s.viewed && !s.mine && hasStories && styles.storyRingActive,
                   s.mine && styles.storyRingMine,
                 ]}
               >
@@ -76,20 +108,33 @@ export default function ReelsScreen() {
         />
       ) : (
         <ScrollView
+          ref={scrollRef}
           pagingEnabled
           showsVerticalScrollIndicator={false}
           snapToInterval={reelHeight}
           decelerationRate="fast"
+          onMomentumScrollEnd={(e) => {
+            setActiveIndex(Math.round(e.nativeEvent.contentOffset.y / reelHeight));
+          }}
         >
-          {(reels ?? []).map((r) => (
-            <ReelCard key={r.id} reel={r} h={reelHeight} onChanged={refetch} />
+          {(reels ?? []).map((r, index) => (
+            <ReelCard
+              key={r.id}
+              reel={r}
+              h={reelHeight}
+              onChanged={refetch}
+              isActive={index === activeIndex}
+              isNearby={Math.abs(index - activeIndex) <= 1}
+              muted={muted}
+              onToggleMute={() => setMuted((m) => !m)}
+            />
           ))}
         </ScrollView>
       )}
     </SafeAreaView>
   );
 }
-function ReelCard({ reel, h, onChanged }) {
+function ReelCard({ reel, h, onChanged, isActive, isNearby, muted, onToggleMute }) {
   const [busy, setBusy] = useState(false);
   const onLike = async () => {
     if (busy) return;
@@ -115,19 +160,30 @@ function ReelCard({ reel, h, onChanged }) {
         },
       ]}
     >
-      {/* faux video content */}
-      <View style={styles.reelCenter}>
-        <Text
-          style={{
-            fontSize: 90,
-          }}
-        >
-          {reel.emoji}
-        </Text>
-        <View style={styles.playHint}>
-          <Ionicons name="play" size={20} color="rgba(255,255,255,0.9)" />
+      {reel.mediaType === 'video' && isNearby ? (
+        <VideoPlayer uri={resolveMediaUrl(reel.mediaUrl)} isActive={isActive} muted={muted} loop style={styles.media} />
+      ) : reel.mediaType === 'image' ? (
+        <Image source={{ uri: resolveMediaUrl(reel.mediaUrl) }} style={styles.media} resizeMode="cover" />
+      ) : (
+        <View style={styles.reelCenter}>
+          <Text
+            style={{
+              fontSize: 90,
+            }}
+          >
+            {reel.emoji}
+          </Text>
+          <View style={styles.playHint}>
+            <Ionicons name="play" size={20} color="rgba(255,255,255,0.9)" />
+          </View>
         </View>
-      </View>
+      )}
+
+      {reel.mediaType === 'video' && (
+        <Pressable style={styles.muteBtn} onPress={onToggleMute} hitSlop={8}>
+          <Ionicons name={muted ? 'volume-mute' : 'volume-high'} size={18} color={colors.white} />
+        </Pressable>
+      )}
 
       {/* Right action rail */}
       <View style={styles.rail}>
@@ -248,6 +304,20 @@ const styles = themedStyles((colors) => ({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  media: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  muteBtn: {
+    position: 'absolute',
+    top: spacing.xl,
+    right: spacing.lg,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   reelCenter: {
     alignItems: 'center',

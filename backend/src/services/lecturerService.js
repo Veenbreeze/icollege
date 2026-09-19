@@ -2,7 +2,7 @@ import { db } from '../db/pool.js';
 import { publicUrlFor } from '../middleware/upload.js';
 import path from 'node:path';
 import { env } from '../config/env.js';
-import * as notificationService from './notificationService.js';
+import * as notificationService from './academicNotificationService.js';
 
 export async function listMyCourses(lecturerId) {
   const courses = await db('courses').where({ lecturer_id: lecturerId }).orderBy('code');

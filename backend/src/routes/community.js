@@ -45,6 +45,10 @@ communityRouter.post('/chambers/:slug/posts', upload.single('image'), asyncHandl
   res.status(201).json(post);
 }));
 
+communityRouter.get('/users/me/posts', asyncHandler(async (req, res) => {
+  res.json(await communityService.listPostsByAuthor(req.user.id, req.user.id));
+}));
+
 communityRouter.get('/posts/:id', asyncHandler(async (req, res) => {
   const post = await communityService.getPost(numericId(req.params.id), req.user.id);
   if (!post) throw new HttpError(404, 'Post not found');

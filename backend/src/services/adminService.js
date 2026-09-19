@@ -1,7 +1,7 @@
 import { db } from '../db/pool.js';
 import { toPublicUser } from './authService.js';
 import { ROLES } from '../utils/roles.js';
-import * as notificationService from './notificationService.js';
+import * as notificationService from './academicNotificationService.js';
 
 export async function listUsers({ status, role } = {}) {
   let query = db('users').select('*').orderBy('created_at', 'desc');

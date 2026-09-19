@@ -9,6 +9,8 @@ import { ThemeProvider, useTheme, colors as staticColors, radii, spacing } from 
 const FRAME_MARGIN = spacing.md;
 const FRAME_RADIUS = radii.xl;
 import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
+import { NotificationsProvider } from '@/lib/notifications/NotificationsContext';
+import { NotificationToast } from '@/components/NotificationToast';
 
 /** Redirects between the auth stack and the app shell based on session state. */
 function AuthGate({ children }) {
@@ -51,6 +53,7 @@ function RootNavigator() {
     >
       <StatusBar style="light" />
       <AuthGate>
+        <NotificationToast />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -89,6 +92,12 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="notifications"
+            options={{
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="documents"
             options={{
               animation: 'slide_from_right',
@@ -96,12 +105,6 @@ function RootNavigator() {
           />
           <Stack.Screen
             name="library"
-            options={{
-              animation: 'slide_from_right',
-            }}
-          />
-          <Stack.Screen
-            name="notifications"
             options={{
               animation: 'slide_from_right',
             }}
@@ -134,6 +137,18 @@ function RootNavigator() {
             name="reels"
             options={{
               animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="story-viewer"
+            options={{
+              animation: 'fade',
+              contentStyle: {
+                marginTop: 0,
+                borderTopLeftRadius: 0,
+                borderTopRightRadius: 0,
+                backgroundColor: '#000',
+              },
             }}
           />
           <Stack.Screen
@@ -205,7 +220,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <RootNavigator />
+            <NotificationsProvider>
+              <RootNavigator />
+            </NotificationsProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

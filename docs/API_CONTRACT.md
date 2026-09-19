@@ -77,6 +77,14 @@ Backend `GET /api/employer/talent-search?skill=&programme=` already exists
 `[{ id, full_name, programme, year, headline, location }]`. The employer console
 "Find Student Talent" card calls it. **No backend work needed.**
 
+> **NOTE (merge 2026-09-19):** two notification systems now coexist after merging
+> with the teammate's branch. **Social** notifications (likes/comments/new posts) live
+> in the `notifications` table + `/api/notifications` (theirs, with in-app feed + toast).
+> **Academic** notifications (below) were renamed to avoid collision: table
+> `academic_notifications`, migration `0015`, route **`/api/academic-notifications`**,
+> service `academicNotificationService.js`. Both work independently. Fusing academic
+> events into the social feed UI is a deliberate future task (two schemas + id routing).
+
 ### Push notifications + rule engine  ✅ BACKEND DONE (built + verified 2026-09-19)
 Built: migration `0014_notifications.js` (`device_tokens`, `notifications` tables),
 `services/notificationService.js` (rule engine + best-effort Expo push),

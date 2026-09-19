@@ -1,116 +1,146 @@
-import { useRouter } from 'expo-router';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { colors, radii, spacing, themedStyles } from '@/theme';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { useApi } from '@/hooks/useApi';
-import { fetchNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/api/notifications';
+import { Avatar } from '@/components/ui/Avatar';
+import { resolveAccent } from '@/lib/colorKey';
 import { timeAgo } from '@/lib/timeAgo';
+import { metaFor } from '@/lib/notifications/meta';
+import { useNotifications } from '@/lib/notifications/NotificationsContext';
+import { initialsOf } from '@/lib/initials';
 
-const TYPE_META = {
-  notice: { icon: 'megaphone', color: colors.primary, soft: colors.primarySoft },
-  lecture: { icon: 'calendar', color: colors.orange, soft: colors.orangeSoft },
-  general: { icon: 'notifications', color: colors.blue, soft: colors.blueSoft },
-};
-
-function metaFor(type) {
-  return TYPE_META[type] ?? TYPE_META.general;
+function targetRoute(n) {
+  if (n.targetType === 'post') return `/post/${n.targetId}`;
+  if (n.targetType === 'reel' || n.targetType === 'story') return '/reels';
+  return null;
 }
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { data, isLoading, refetch } = useApi(fetchNotifications);
-  const items = Array.isArray(data) ? data : [];
-  const unread = items.filter((n) => !n.read);
+  const { notifications, unreadCount, markRead, markAllRead, refetch } = useNotifications();
+  const isLoading = false;
 
-  async function onOpen(n) {
-    if (!n.read) {
-      await markNotificationRead(n.id).catch(() => {});
-      refetch();
-    }
-    if (n.deepLink) router.push(n.deepLink);
-  }
-
-  async function onMarkAll() {
-    if (unread.length === 0) return;
-    await markAllNotificationsRead().catch(() => {});
-    refetch();
-  }
+  const onOpen = async (n) => {
+    if (!n.read) await markRead(n.id);
+    const route = targetRoute(n);
+    if (route) router.push(route);
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
-        title="Notifications"
-        subtitle={unread.length > 0 ? `${unread.length} unread` : 'All caught up'}
+        title="Activity"
+        subtitle={`${unreadCount} unread`}
         titleSize={22}
         right={
-          <Pressable style={styles.markBtn} onPress={onMarkAll} disabled={unread.length === 0} hitSlop={6}>
-            <Ionicons name="checkmark-done-outline" size={18} color={unread.length ? colors.primary : colors.textMuted} />
+          <Pressable style={styles.markBtn} onPress={markAllRead} disabled={unreadCount === 0}>
+            <Ionicons name="checkmark-done-outline" size={18} color={colors.primary} />
           </Pressable>
         }
       />
 
       <ScrollView
-        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.primary} />}
+        refreshControl={undefined}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        onScrollBeginDrag={refetch}
       >
-        {isLoading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
-        ) : items.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="notifications-off-outline" size={30} color={colors.primary} />
-            </View>
-            <Text style={styles.emptyTitle}>No notifications yet</Text>
-            <Text style={styles.emptyBody}>
-              Alerts about notices, cancelled lectures and campus updates will show up here.
-            </Text>
-          </View>
-        ) : (
-          items.map((n) => {
-            const meta = metaFor(n.type);
-            return (
-              <Pressable key={n.id} onPress={() => onOpen(n)}>
-                <Card style={[styles.row, !n.read && styles.rowUnread]}>
-                  <View style={[styles.iconWrap, { backgroundColor: meta.soft }]}>
-                    <Ionicons name={meta.icon} size={20} color={meta.color} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowTitle} numberOfLines={2}>{n.title}</Text>
-                    {n.body ? <Text style={styles.rowBody} numberOfLines={3}>{n.body}</Text> : null}
-                    <Text style={styles.rowTime}>{timeAgo(n.createdAt)}</Text>
-                  </View>
-                  {!n.read && <View style={styles.unreadDot} />}
-                </Card>
-              </Pressable>
-            );
-          })
+        {isLoading && <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.lg }} />}
+        {!isLoading && notifications.length === 0 && (
+          <Text style={styles.emptyText}>No activity yet — likes, comments and shares on your posts will show up here.</Text>
         )}
+        {notifications.map((n) => (
+          <NotificationCard key={n.id} notification={n} onPress={() => onOpen(n)} />
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = themedStyles((colors) => ({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 120 },
-  markBtn: {
-    width: 38, height: 38, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-  },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.md },
-  rowUnread: { borderLeftWidth: 3, borderLeftColor: colors.primary },
-  iconWrap: { width: 42, height: 42, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
-  rowTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
-  rowBody: { fontSize: 12.5, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
-  rowTime: { fontSize: 11.5, color: colors.textMuted, marginTop: 6 },
-  unreadDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.primary, marginTop: 4 },
+function NotificationCard({ notification, onPress }) {
+  const { icon, colorKey } = metaFor(notification.type);
+  const { color, soft } = resolveAccent(colorKey);
+  return (
+    <Pressable onPress={onPress}>
+      <Card style={[styles.card, !notification.read && styles.cardUnread]}>
+        <Avatar initials={notification.initials ?? initialsOf(notification.actor ?? '?')} size={40} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardText}>
+            <Text style={styles.actor}>{notification.actor ?? 'Someone'}</Text> {notification.message}
+          </Text>
+          <Text style={styles.time}>{timeAgo(notification.time)}</Text>
+        </View>
+        <View style={[styles.icon, { backgroundColor: soft }]}>
+          <Ionicons name={icon} size={16} color={color} />
+        </View>
+        {!notification.read && <View style={styles.unreadDot} />}
+      </Card>
+    </Pressable>
+  );
+}
 
-  emptyWrap: { alignItems: 'center', marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
-  emptyIcon: { width: 64, height: 64, borderRadius: radii.xl, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
-  emptyTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: spacing.xs },
-  emptyBody: { fontSize: 13.5, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+const styles = themedStyles((colors) => ({
+  safe: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  markBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    marginHorizontal: spacing.xl,
+    lineHeight: 19,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  cardUnread: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  cardText: {
+    fontSize: 13.5,
+    color: colors.text,
+    lineHeight: 19,
+  },
+  actor: {
+    fontWeight: '700',
+  },
+  time: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  icon: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
 }));

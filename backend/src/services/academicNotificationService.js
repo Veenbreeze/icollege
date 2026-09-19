@@ -36,7 +36,7 @@ function toPublic(row) {
 }
 
 export async function listNotifications(userId, { limit = 50 } = {}) {
-  const rows = await db('notifications')
+  const rows = await db('academic_notifications')
     .where({ user_id: userId })
     .orderBy('created_at', 'desc')
     .limit(limit);
@@ -44,12 +44,12 @@ export async function listNotifications(userId, { limit = 50 } = {}) {
 }
 
 export async function unreadCount(userId) {
-  const row = await db('notifications').where({ user_id: userId, read: false }).count({ c: '*' }).first();
+  const row = await db('academic_notifications').where({ user_id: userId, read: false }).count({ c: '*' }).first();
   return Number(row?.c ?? 0);
 }
 
 export async function markRead(userId, id) {
-  const [row] = await db('notifications')
+  const [row] = await db('academic_notifications')
     .where({ id, user_id: userId })
     .update({ read: true })
     .returning('*');
@@ -57,7 +57,7 @@ export async function markRead(userId, id) {
 }
 
 export async function markAllRead(userId) {
-  await db('notifications').where({ user_id: userId, read: false }).update({ read: true });
+  await db('academic_notifications').where({ user_id: userId, read: false }).update({ read: true });
   return true;
 }
 
@@ -80,7 +80,7 @@ export async function notifyUsers(userIds, { title, body = null, type = 'general
 
   try {
     const rows = ids.map((uid) => ({ user_id: uid, title, body, type, deep_link: deepLink, read: false }));
-    await db('notifications').insert(rows);
+    await db('academic_notifications').insert(rows);
   } catch (err) {
     console.error('[notifications] persist failed:', err.message);
     return;

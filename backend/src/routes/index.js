@@ -4,6 +4,7 @@ import { academicRouter } from './academic.js';
 import { documentsRouter } from './documents.js';
 import { libraryRouter } from './library.js';
 import { notificationsRouter } from './notifications.js';
+import { academicNotificationsRouter } from './academicNotifications.js';
 import { communityRouter } from './community.js';
 import { chatRouter } from './chat.js';
 import { clubsRouter } from './clubs.js';
@@ -23,7 +24,8 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use(academicRouter); // owns /timetable, /exams, /notices
 apiRouter.use('/documents', documentsRouter);
 apiRouter.use('/library', libraryRouter);
-apiRouter.use('/notifications', notificationsRouter);
+apiRouter.use('/notifications', notificationsRouter); // social activity (likes/comments/…)
+apiRouter.use('/academic-notifications', academicNotificationsRouter); // notice/lecture alerts + push
 apiRouter.use('/community', communityRouter);
 apiRouter.use('/chat', chatRouter);
 apiRouter.use(clubsRouter); // owns /clubs, /events

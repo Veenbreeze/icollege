@@ -27,8 +27,16 @@ reelsRouter.post('/stories', uploadStory.single('media'), asyncHandler(async (re
   res.status(201).json(await reelsService.createStory(req.user.id, relativeUploadPath(req.file)));
 }));
 
+reelsRouter.post('/stories/:id/view', asyncHandler(async (req, res) => {
+  res.json(await reelsService.markStoryViewed(numericId(req.params.id), req.user.id));
+}));
+
 reelsRouter.get('/reels', asyncHandler(async (req, res) => {
   res.json(await reelsService.listReels(req.user.id));
+}));
+
+reelsRouter.get('/users/me/reels', asyncHandler(async (req, res) => {
+  res.json(await reelsService.listReelsByAuthor(req.user.id, req.user.id));
 }));
 
 reelsRouter.post('/reels', uploadReel.single('media'), asyncHandler(async (req, res) => {
@@ -43,5 +51,5 @@ reelsRouter.post('/reels/:id/like', asyncHandler(async (req, res) => {
 }));
 
 reelsRouter.post('/reels/:id/share', asyncHandler(async (req, res) => {
-  res.json(await reelsService.incrementReelShares(numericId(req.params.id)));
+  res.json(await reelsService.incrementReelShares(numericId(req.params.id), req.user.id));
 }));

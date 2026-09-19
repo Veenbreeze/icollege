@@ -11,10 +11,10 @@ import { Avatar } from '@/components/ui/Avatar';
 import { IconTile } from '@/components/ui/IconTile';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useNotifications } from '@/lib/notifications/NotificationsContext';
 import { useApi } from '@/hooks/useApi';
 import { fetchTodayTimetable, fetchNotices } from '@/lib/api/academic';
 import { fetchChambers } from '@/lib/api/community';
-import { fetchUnreadCount } from '@/lib/api/notifications';
 import { initialsOf, greetingForNow } from '@/lib/initials';
 import { resolveMediaUrl } from '@/lib/api/client';
 import { resolveAccent } from '@/lib/colorKey';
@@ -31,8 +31,7 @@ export default function HomeScreen() {
   const { data: today, isLoading: loadingTimetable } = useApi(fetchTodayTimetable);
   const { data: notices, isLoading: loadingNotices } = useApi(fetchNotices);
   const { data: chambers } = useApi(fetchChambers);
-  const { data: unreadData } = useApi(fetchUnreadCount);
-  const notifUnread = unreadData?.count ?? 0;
+  const { unreadCount: unreadActivity } = useNotifications();
   if (!user) return null;
   if (user.role !== 'student') return <RoleHome />;
   const classes = today?.classes ?? [];
@@ -41,7 +40,7 @@ export default function HomeScreen() {
   const priorityNotice = unreadNotices.find((n) => n.priority !== 'Normal') ?? unreadNotices[0];
   const quickActions = NAV_ITEMS.filter((i) => i.showInQuickActions).map((i) => ({
     ...i,
-    badge: i.key === 'notices' ? unreadNotices.length > 0 : i.badge,
+    badge: i.key === 'notices' ? unreadNotices.length > 0 : i.key === 'activity' ? unreadActivity > 0 : i.badge,
   }));
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -66,10 +65,18 @@ export default function HomeScreen() {
           </View>
           <View style={styles.headerRight}>
             <Pressable onPress={() => router.push('/notifications')} hitSlop={6}>
-              <Ionicons name="notifications-outline" size={24} color={colors.text} />
-              {notifUnread > 0 && (
+              <Ionicons name="heart-outline" size={24} color={colors.text} />
+              {unreadActivity > 0 && (
                 <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</Text>
+                  <Text style={styles.bellBadgeText}>{unreadActivity}</Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable onPress={() => router.push('/notices')} hitSlop={6}>
+              <Ionicons name="notifications-outline" size={24} color={colors.text} />
+              {unreadNotices.length > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>{unreadNotices.length}</Text>
                 </View>
               )}
             </Pressable>
