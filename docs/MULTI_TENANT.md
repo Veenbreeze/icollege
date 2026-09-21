@@ -36,9 +36,13 @@ row to a default **iCollege University** (id 1), so nothing broke.
   as an ICU and a UIT student and asserts neither sees the other's academics. Passing.
 
 ## Remaining scoping (next steps, tracked)
-- ⬜ **Courses list / exam seating / documents (iVault + iLibrary)** — scope reads by university.
-- ⬜ **C3 authenticated file access** — `/uploads` is still public; gate downloads by
-  ownership/visibility/tenant.
+- ✅ **Courses / exam-seating / iLibrary / AI study courses** — reads scoped by university
+  (2026-09-21). Admin course list scoped (platform_admin sees all). New courses stamped.
+- ✅ **C3 authenticated file access** — sensitive files (iVault `documents/` + course
+  `materials/`) are no longer served statically; `GET /api/files/:id/download` (requireAuth)
+  checks visibility: `private`→owner-only, `course`→same-university. Public media
+  (avatars/posts/reels/stories) still static. Verified: 401 no-auth, 200 owner/same-uni,
+  403 other-uni/non-owner, 404 old static path. Leak test extended to cover these.
 - ⬜ **Talent search** — decide: national (employers hire cross-university, current) vs
   scoped. Currently returns all open students; confirm intended visibility.
 - ⬜ **Chambers / posts / reels / stories** — add `scope` (national vs university) for the

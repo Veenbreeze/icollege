@@ -79,8 +79,8 @@ export async function search(userId, query) {
   return { interpretation, results };
 }
 
-export async function listStudyCourses() {
-  const courses = await db('courses').select('*');
+export async function listStudyCourses(universityId) {
+  const courses = await db('courses').where({ university_id: universityId }).select('*');
   const [fMap, qMap] = await Promise.all([
     countByColumn('flashcards', 'course_id'),
     countByColumn('quiz_questions', 'course_id'),
@@ -97,8 +97,8 @@ export async function listStudyCourses() {
   }));
 }
 
-export async function getCourseStudy(courseId) {
-  const course = await db('courses').where({ id: courseId }).first();
+export async function getCourseStudy(courseId, universityId) {
+  const course = await db('courses').where({ id: courseId, university_id: universityId }).first();
   if (!course) return null;
 
   const flashcards = await db('flashcards').where({ course_id: courseId });

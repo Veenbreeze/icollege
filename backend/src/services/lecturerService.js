@@ -55,7 +55,7 @@ export async function uploadMaterial(lecturerId, courseId, file) {
     course_id: courseId,
     visibility: 'course',
   }).returning('*');
-  return { ...row, url: publicUrlFor(row.storage_path) };
+  return { ...row, url: `/api/files/${row.id}/download` }; // authenticated, access-checked
 }
 
 export async function createLectureUpdate(lecturerId, { timetableSlotId, date, status, note }) {

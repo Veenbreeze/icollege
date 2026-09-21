@@ -18,7 +18,7 @@ function toPublic(row) {
     category: row.category,
     size: formatSize(row.size_bytes),
     date: row.created_at,
-    url: publicUrlFor(row.storage_path),
+    url: `/api/files/${row.id}/download`, // authenticated, access-checked
   };
 }
 

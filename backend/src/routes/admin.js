@@ -32,10 +32,10 @@ adminRouter.patch('/users/:id/role', requireRole('platform_admin'), asyncHandler
 
 /* courses */
 adminRouter.get('/courses', asyncHandler(async (req, res) => {
-  res.json(await adminService.listCourses());
+  res.json(await adminService.listCourses(req.user.universityId));
 }));
 adminRouter.post('/courses', asyncHandler(async (req, res) => {
-  res.status(201).json(await adminService.createCourse(req.body));
+  res.status(201).json(await adminService.createCourse(req.body, req.user.universityId));
 }));
 adminRouter.patch('/courses/:id', asyncHandler(async (req, res) => {
   const row = await adminService.updateCourse(numericId(req.params.id), req.body);

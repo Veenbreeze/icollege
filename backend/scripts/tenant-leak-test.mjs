@@ -44,14 +44,19 @@ async function run() {
   for (const [self, other] of [[A, B], [B, A]]) {
     const token = self === A ? tokenA : tokenB;
     console.log(`\n${self.label} student must NOT see ${other.label} data:`);
-    const [notices, week, exams] = await Promise.all([
+    const [notices, week, exams, courses, library] = await Promise.all([
       get(token, '/api/notices'),
       get(token, '/api/timetable/week'),
       get(token, '/api/exams'),
+      get(token, '/api/ai/study/courses'),
+      get(token, '/api/library'),
     ]);
     check(`sees own timetable (${self.ownMarker})`, includes(week, self.ownMarker));
     check(`does NOT see ${other.label} timetable (${other.ownMarker})`, !includes(week, other.ownMarker));
     check(`does NOT see ${other.label} exams`, !includes(exams, other.ownMarker));
+    check(`sees own study courses (${self.ownMarker})`, includes(courses, self.ownMarker));
+    check(`does NOT see ${other.label} study courses (${other.ownMarker})`, !includes(courses, other.ownMarker));
+    check(`does NOT see ${other.label} library materials`, !includes(library, other.ownMarker));
     check(`notices are non-empty and own-scoped`, Array.isArray(notices) && notices.length > 0);
   }
 

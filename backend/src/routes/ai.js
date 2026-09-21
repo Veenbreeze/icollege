@@ -15,11 +15,11 @@ aiRouter.get('/search', asyncHandler(async (req, res) => {
 }));
 
 aiRouter.get('/study/courses', asyncHandler(async (req, res) => {
-  res.json(await aiService.listStudyCourses());
+  res.json(await aiService.listStudyCourses(req.user.universityId));
 }));
 
 aiRouter.get('/study/courses/:id', asyncHandler(async (req, res) => {
-  const study = await aiService.getCourseStudy(numericId(req.params.id));
+  const study = await aiService.getCourseStudy(numericId(req.params.id), req.user.universityId);
   if (!study) throw new HttpError(404, 'Course not found');
   res.json(study);
 }));

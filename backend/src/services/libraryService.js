@@ -14,7 +14,7 @@ function toPublic(row) {
     name: row.name,
     type: row.doc_type, // 'pdf' | 'image' | 'doc'
     size: formatSize(row.size_bytes),
-    url: publicUrlFor(row.storage_path),
+    url: `/api/files/${row.id}/download`, // authenticated, access-checked
     courseCode: row.course_code,
     courseTitle: row.course_title,
     uploadedBy: row.uploaded_by,
@@ -26,11 +26,12 @@ function toPublic(row) {
  * iLibrary — course materials lecturers have shared (documents with
  * visibility='course'). Optionally filtered by course.
  */
-export async function listMaterials({ courseId } = {}) {
+export async function listMaterials({ courseId, universityId } = {}) {
   const rows = await db('documents')
     .join('courses', 'courses.id', 'documents.course_id')
     .join('users', 'users.id', 'documents.user_id')
     .where('documents.visibility', 'course')
+    .andWhere('courses.university_id', universityId) // tenant scope: only this university's course materials
     .modify((q) => {
       if (courseId) q.andWhere('documents.course_id', courseId);
     })

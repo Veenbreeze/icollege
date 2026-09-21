@@ -9,5 +9,5 @@ libraryRouter.use(requireAuth);
 
 libraryRouter.get('/', asyncHandler(async (req, res) => {
   const courseId = req.query.courseId ? numericId(req.query.courseId) : undefined;
-  res.json(await libraryService.listMaterials({ courseId }));
+  res.json(await libraryService.listMaterials({ courseId, universityId: req.user.universityId }));
 }));

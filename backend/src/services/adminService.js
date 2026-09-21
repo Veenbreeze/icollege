@@ -25,15 +25,19 @@ export async function updateUserRole(userId, role) {
 
 /* ---- courses / timetable / exams / notices (shared with lecturerService reads) ---- */
 
-export async function listCourses() {
-  return db('courses').leftJoin('users', 'users.id', 'courses.lecturer_id')
+export async function listCourses(universityId) {
+  const q = db('courses').leftJoin('users', 'users.id', 'courses.lecturer_id')
     .select('courses.*', 'users.full_name as assigned_lecturer_name')
     .orderBy('courses.code');
+  // university_admin sees only their university; platform_admin (no universityId) sees all.
+  if (universityId) q.where('courses.university_id', universityId);
+  return q;
 }
 
-export async function createCourse(data) {
+export async function createCourse(data, universityId) {
   const [row] = await db('courses').insert({
     code: data.code, title: data.title, lecturer_name: data.lecturerName, icon: data.icon, color_key: data.colorKey,
+    university_id: universityId ?? null,
   }).returning('*');
   return row;
 }

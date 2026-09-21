@@ -126,10 +126,11 @@ export async function getExams(userId, universityId, now = new Date()) {
   });
 }
 
-export async function getExamSeating(examId, userId) {
+export async function getExamSeating(examId, userId, universityId) {
   const exam = await db('exams')
     .join('courses', 'courses.id', 'exams.course_id')
     .where('exams.id', examId)
+    .andWhere('courses.university_id', universityId) // tenant scope: can't read another university's exam
     .select('exams.*', 'courses.code', 'courses.title')
     .first();
   if (!exam) return null;

@@ -22,7 +22,7 @@ academicRouter.get('/exams', asyncHandler(async (req, res) => {
 
 academicRouter.get('/exams/:id/seating', asyncHandler(async (req, res) => {
   const examId = numericId(req.params.id);
-  const seating = await academicService.getExamSeating(examId, req.user.id);
+  const seating = await academicService.getExamSeating(examId, req.user.id, req.user.universityId);
   if (!seating) throw new HttpError(404, 'Exam not found');
   res.json(seating);
 }));

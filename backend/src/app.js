@@ -9,7 +9,14 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.resolve(env.uploadDir)));
+
+// Only genuinely public media is served statically. Sensitive academic files
+// (iVault documents + course materials) are NOT here — they go through the
+// authenticated, access-checked route at /api/files/:id/download.
+const uploadsRoot = path.resolve(env.uploadDir);
+for (const publicDir of ['avatars', 'posts', 'reels', 'stories']) {
+  app.use(`/uploads/${publicDir}`, express.static(path.join(uploadsRoot, publicDir)));
+}
 
 app.get('/api/health', (_request, response) => {
   response.status(200).json({ status: 'ok', service: 'icollege-api' });
