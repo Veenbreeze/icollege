@@ -63,9 +63,14 @@ export async function markAllRead(userId) {
 
 /* ---- rule engine -------------------------------------------------- */
 
-/** All active students — the default audience for institution-wide events. */
-export async function activeStudentIds() {
-  return db('users').where({ role: 'student', status: 'active' }).pluck('id');
+/**
+ * Active students to notify. Scoped to one university when `universityId` is
+ * given (the normal case); pass null only for genuinely national events.
+ */
+export async function activeStudentIds(universityId) {
+  const q = db('users').where({ role: 'student', status: 'active' });
+  if (universityId) q.andWhere({ university_id: universityId });
+  return q.pluck('id');
 }
 
 /**

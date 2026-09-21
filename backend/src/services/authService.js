@@ -22,7 +22,27 @@ export function toPublicUser(user) {
     successScore: user.success_score,
     role: user.role,
     status: user.status,
+    universityId: user.university_id ?? null,
+    campusId: user.campus_id ?? null,
+    departmentId: user.department_id ?? null,
+    programmeId: user.programme_id ?? null,
+    // Joined display fields when the caller passed an enriched row (see fetchMe).
+    universityName: user.university_name ?? null,
+    universityShortName: user.university_short_name ?? null,
   };
+}
+
+/** The current user enriched with their university display fields (for personalization). */
+export async function getMe(userId) {
+  const user = await db('users')
+    .leftJoin('universities', 'universities.id', 'users.university_id')
+    .where('users.id', userId)
+    .first(
+      'users.*',
+      'universities.name as university_name',
+      'universities.short_name as university_short_name',
+    );
+  return user ? toPublicUser(user) : null;
 }
 
 export async function updateProfile(userId, { fullName, username, email, phone }) {

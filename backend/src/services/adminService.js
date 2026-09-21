@@ -125,12 +125,15 @@ export async function generateExamSeating(examId) {
   return { assigned: seats.length };
 }
 
-export async function createNotice(data) {
+export async function createNotice(data, universityId) {
+  // platform_admin (no university) publishes nationally; university_admin scopes to theirs.
+  const scope = universityId ? 'university' : 'national';
   const [row] = await db('notices').insert({
     title: data.title, body: data.body, category: data.category, priority: data.priority || 'Normal', icon: data.icon, color_key: data.colorKey,
+    university_id: universityId ?? null, scope,
   }).returning('*');
-  // Rule engine: publishing a notice alerts every active student.
-  const studentIds = await notificationService.activeStudentIds();
+  // Rule engine: alert the students who can actually see this notice.
+  const studentIds = await notificationService.activeStudentIds(scope === 'national' ? null : universityId);
   await notificationService.notifyUsers(studentIds, {
     title: `New notice: ${row.title}`,
     body: row.body,

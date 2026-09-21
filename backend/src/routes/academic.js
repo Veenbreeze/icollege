@@ -9,15 +9,15 @@ export const academicRouter = Router();
 academicRouter.use(requireAuth);
 
 academicRouter.get('/timetable/today', asyncHandler(async (req, res) => {
-  res.json(await academicService.getTodayTimetable());
+  res.json(await academicService.getTodayTimetable(req.user.universityId));
 }));
 
 academicRouter.get('/timetable/week', asyncHandler(async (req, res) => {
-  res.json(await academicService.getWeekTimetable());
+  res.json(await academicService.getWeekTimetable(req.user.universityId));
 }));
 
 academicRouter.get('/exams', asyncHandler(async (req, res) => {
-  res.json(await academicService.getExams(req.user.id));
+  res.json(await academicService.getExams(req.user.id, req.user.universityId));
 }));
 
 academicRouter.get('/exams/:id/seating', asyncHandler(async (req, res) => {
@@ -28,7 +28,7 @@ academicRouter.get('/exams/:id/seating', asyncHandler(async (req, res) => {
 }));
 
 academicRouter.get('/notices', asyncHandler(async (req, res) => {
-  res.json(await academicService.getNotices(req.user.id));
+  res.json(await academicService.getNotices(req.user.id, req.user.universityId));
 }));
 
 academicRouter.post('/notices/:id/read', asyncHandler(async (req, res) => {

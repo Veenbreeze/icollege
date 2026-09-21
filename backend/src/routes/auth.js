@@ -54,9 +54,9 @@ authRouter.post('/reset-password', asyncHandler(async (req, res) => {
 }));
 
 authRouter.get('/me', requireAuth, asyncHandler(async (req, res) => {
-  const user = await db('users').where({ id: req.user.id }).first();
+  const user = await authService.getMe(req.user.id);
   if (!user) throw new HttpError(404, 'User not found');
-  res.json(authService.toPublicUser(user));
+  res.json(user);
 }));
 
 authRouter.patch('/me', requireAuth, asyncHandler(async (req, res) => {

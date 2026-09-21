@@ -99,7 +99,7 @@ adminRouter.post('/exams/:id/generate-seating', asyncHandler(async (req, res) =>
 
 /* notices */
 adminRouter.post('/notices', asyncHandler(async (req, res) => {
-  res.status(201).json(await adminService.createNotice(req.body));
+  res.status(201).json(await adminService.createNotice(req.body, req.user.universityId));
 }));
 adminRouter.patch('/notices/:id', asyncHandler(async (req, res) => {
   const row = await adminService.updateNotice(numericId(req.params.id), req.body);

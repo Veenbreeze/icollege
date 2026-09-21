@@ -14,13 +14,14 @@ function to12Hour(hhmm) {
   return `${String(hour12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-export async function getTodayTimetable(now = new Date()) {
+export async function getTodayTimetable(universityId, now = new Date()) {
   const dayOfWeek = now.getDay();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   const rows = await db('timetable_slots')
     .join('courses', 'courses.id', 'timetable_slots.course_id')
     .where('timetable_slots.day_of_week', dayOfWeek)
+    .andWhere('courses.university_id', universityId) // tenant scope
     .select(
       'timetable_slots.id', 'timetable_slots.start_time', 'timetable_slots.end_time',
       'timetable_slots.room', 'timetable_slots.type',
@@ -59,9 +60,10 @@ export async function getTodayTimetable(now = new Date()) {
   return { day: DAY_NAMES[dayOfWeek], classes };
 }
 
-export async function getWeekTimetable() {
+export async function getWeekTimetable(universityId) {
   const rows = await db('timetable_slots')
     .join('courses', 'courses.id', 'timetable_slots.course_id')
+    .where('courses.university_id', universityId) // tenant scope
     .select(
       'timetable_slots.id', 'timetable_slots.day_of_week', 'timetable_slots.start_time', 'timetable_slots.end_time',
       'timetable_slots.room', 'timetable_slots.type',
@@ -85,12 +87,13 @@ export async function getWeekTimetable() {
   }));
 }
 
-export async function getExams(userId, now = new Date()) {
+export async function getExams(userId, universityId, now = new Date()) {
   const rows = await db('exams')
     .join('courses', 'courses.id', 'exams.course_id')
     .leftJoin('exam_seats', function () {
       this.on('exam_seats.exam_id', '=', 'exams.id').andOn('exam_seats.user_id', '=', db.raw('?', [userId]));
     })
+    .where('courses.university_id', universityId) // tenant scope
     .select(
       'exams.id', 'exams.type', 'exams.exam_date', 'exams.exam_time', 'exams.duration', 'exams.venue', 'exams.room',
       'courses.code', 'courses.title', 'courses.icon', 'courses.color_key',
@@ -145,10 +148,14 @@ export async function getExamSeating(examId, userId) {
   };
 }
 
-export async function getNotices(userId) {
+export async function getNotices(userId, universityId) {
   const rows = await db('notices')
     .leftJoin('notice_reads', function () {
       this.on('notice_reads.notice_id', '=', 'notices.id').andOn('notice_reads.user_id', '=', db.raw('?', [userId]));
+    })
+    // tenant scope: own university's notices + anything published nationally
+    .where(function () {
+      this.where('notices.university_id', universityId).orWhere('notices.scope', 'national');
     })
     .select('notices.*', 'notice_reads.read_at')
     .orderBy('notices.published_at', 'desc');

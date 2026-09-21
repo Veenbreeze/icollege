@@ -16,6 +16,7 @@ export async function createNotice(lecturerId, { title, body, courseId }) {
   const course = courseId ? await db('courses').where({ id: courseId, lecturer_id: lecturerId }).first() : null;
   if (courseId && !course) return null;
 
+  const universityId = (await db('users').where({ id: lecturerId }).first('university_id'))?.university_id ?? null;
   const [row] = await db('notices').insert({
     title,
     body,
@@ -23,9 +24,11 @@ export async function createNotice(lecturerId, { title, body, courseId }) {
     priority: 'Normal',
     icon: 'megaphone-outline',
     color_key: 'primary',
+    university_id: universityId,
+    scope: universityId ? 'university' : 'national',
   }).returning('*');
-  // Rule engine: a lecturer announcement alerts every active student.
-  const studentIds = await notificationService.activeStudentIds();
+  // Rule engine: a lecturer announcement alerts their university's students.
+  const studentIds = await notificationService.activeStudentIds(universityId);
   await notificationService.notifyUsers(studentIds, {
     title: course ? `${course.code}: ${row.title}` : `New notice: ${row.title}`,
     body: row.body,
@@ -60,17 +63,17 @@ export async function createLectureUpdate(lecturerId, { timetableSlotId, date, s
     .join('courses', 'courses.id', 'timetable_slots.course_id')
     .where('timetable_slots.id', timetableSlotId)
     .andWhere('courses.lecturer_id', lecturerId)
-    .first('timetable_slots.id', 'courses.code as course_code', 'courses.title as course_title');
+    .first('timetable_slots.id', 'courses.code as course_code', 'courses.title as course_title', 'courses.university_id as university_id');
   if (!slot) return null;
 
   const [row] = await db('lecture_updates').insert({
     timetable_slot_id: timetableSlotId, date, status, note, updated_by: lecturerId,
   }).returning('*');
 
-  // Rule engine: a cancelled/moved lecture alerts students.
+  // Rule engine: a cancelled/moved lecture alerts that university's students.
   if (status === 'cancelled' || status === 'moved') {
     const verb = status === 'cancelled' ? 'cancelled' : 'rescheduled';
-    const studentIds = await notificationService.activeStudentIds();
+    const studentIds = await notificationService.activeStudentIds(slot.university_id);
     await notificationService.notifyUsers(studentIds, {
       title: `Lecture ${verb}: ${slot.course_code}`,
       body: `${slot.course_title} on ${date} has been ${verb}.${note ? ` ${note}` : ''}`,
