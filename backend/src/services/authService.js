@@ -129,7 +129,9 @@ async function issueSession(user) {
   const accessToken = signAccessToken(user);
   const { token: refreshToken, tokenHash, expiresAt } = generateRefreshToken();
   await db('refresh_tokens').insert({ user_id: user.id, token_hash: tokenHash, expires_at: expiresAt });
-  return { accessToken, refreshToken, user: toPublicUser(user) };
+  // Enrich with university display fields so the client can personalize immediately.
+  const publicUser = (await getMe(user.id)) ?? toPublicUser(user);
+  return { accessToken, refreshToken, user: publicUser };
 }
 
 export async function refresh(refreshToken) {

@@ -103,8 +103,14 @@ export function AppDrawer({ visible, onClose }) {
                 <Text style={styles.name}>{user?.fullName}</Text>
                 {user?.username && <Text style={styles.handle}>@{user.username}</Text>}
                 <Text style={styles.sub}>
-                  {user?.year} · {user?.programme}
+                  {[user?.year, user?.programme].filter(Boolean).join(' · ')}
                 </Text>
+                {user?.universityName && (
+                  <View style={styles.uniRow}>
+                    <Ionicons name="school" size={12} color={colors.primary} />
+                    <Text style={styles.uniText} numberOfLines={1}>{user.universityName}</Text>
+                  </View>
+                )}
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
@@ -227,6 +233,18 @@ const drawerStyles = themedStyles((colors) => ({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  uniRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  uniText: {
+    fontSize: 11.5,
+    color: colors.primary,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   navRow: {
     flexDirection: 'row',

@@ -104,7 +104,9 @@ export default function HomeScreen() {
             <Text style={styles.greetTitle}>
               {greetingForNow()}, {user.fullName.split(' ')[0]}
             </Text>
-            <Text style={styles.greetSub}>You have a productive day ahead!</Text>
+            <Text style={styles.greetSub} numberOfLines={1}>
+              {[user.universityName, user.programme, user.year].filter(Boolean).join(' · ') || 'You have a productive day ahead!'}
+            </Text>
           </View>
           <Pressable style={styles.scorePill} onPress={() => router.push('/portfolio')}>
             <Ionicons name="star" size={16} color={colors.yellow} />
