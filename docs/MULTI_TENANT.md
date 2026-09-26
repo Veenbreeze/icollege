@@ -51,12 +51,26 @@ row to a default **iCollege University** (id 1), so nothing broke.
   `getChamber`/`listPosts` (404 for outsiders), `listReels` (national/no-chamber + own-
   university). Verified by 4 new leak-test checks. TODO: block *posting* to a university
   chamber you can't see (createPost visibility check); scope `stories` (currently national).
-- ⬜ **H3 login identity** — make `(university_id, student_id)` the unique key and select
-  university at login, so IDs can repeat across universities.
-- ⬜ **H4 signup binding** — bind signup to a university via verified email domain
-  (`universities.email_domains`) or admin invite/bulk import; route role approvals to that
-  university's admins.
-- ⬜ **Admin consoles** — `university_admin` scoped to their university; `platform_admin` global.
+- ✅ **H3 login identity** (migration `0018`) — `(university_id, student_id)` is now the
+  unique key (global `student_id` unique dropped), so IDs can repeat across universities.
+  `login(studentId, password, universitySlug?)` disambiguates when several universities
+  share an ID (else works as before). Proven: same ID registered under ICU and UIT.
+- ✅ **H4 signup binding** — signup resolves the university from the verified email domain
+  (`resolveUniversityByEmail` → `universities.email_domains`) and binds `university_id`;
+  unknown domains are rejected. Employers stay cross-university (no binding). Public
+  `GET /api/auth/universities` feeds login/signup pickers. Frontend signup already
+  collects email, so it works unchanged. FOLLOW-UP: a university picker on the login
+  screen (only needed once IDs actually collide across universities); admin invite / bulk
+  import path; route role-approvals to the right university's admins.
+- ✅ **Admin consoles** — `university_admin` scoped to their university; `platform_admin`
+  global. Scoped: `listUsers` (roster), `updateUserStatus` (approvals guard), `getStats`
+  (user counts), `listTimetableChangeRequests` + resolve guard, `updateNotice`/`deleteNotice`,
+  `updateCourse`/`deleteCourse`. Fixed bug: `generateExamSeating` seated ALL students
+  platform-wide → now scoped to the exam's university. Migration `0019` un-scopes
+  `platform_admin` + `employer` (`university_id = NULL`) so they act globally. Verified:
+  ICU admin sees only ICU users, can't suspend a UIT student (400); platform admin sees all.
+  FOLLOW-UP: guard `updateExam`/`deleteExam` + `updateTimetableSlot`/`deleteTimetableSlot`
+  (derive university via course) — lower risk, not yet done.
 - ⬜ Enforce `NOT NULL` on `university_id` once all write paths stamp it.
 
 ## Local setup for the leak test

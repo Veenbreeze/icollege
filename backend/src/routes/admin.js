@@ -10,16 +10,16 @@ export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('university_admin', 'platform_admin'));
 
 adminRouter.get('/stats', asyncHandler(async (req, res) => {
-  res.json(await adminService.getStats());
+  res.json(await adminService.getStats(req.user.universityId));
 }));
 
 /* users */
 adminRouter.get('/users', asyncHandler(async (req, res) => {
-  res.json(await adminService.listUsers({ status: req.query.status, role: req.query.role }));
+  res.json(await adminService.listUsers({ status: req.query.status, role: req.query.role, universityId: req.user.universityId }));
 }));
 
 adminRouter.patch('/users/:id/status', asyncHandler(async (req, res) => {
-  const user = await adminService.updateUserStatus(numericId(req.params.id), req.body.status);
+  const user = await adminService.updateUserStatus(numericId(req.params.id), req.body.status, req.user.universityId);
   if (!user) throw new HttpError(400, 'Invalid user or status');
   res.json(user);
 }));
@@ -38,12 +38,12 @@ adminRouter.post('/courses', asyncHandler(async (req, res) => {
   res.status(201).json(await adminService.createCourse(req.body, req.user.universityId));
 }));
 adminRouter.patch('/courses/:id', asyncHandler(async (req, res) => {
-  const row = await adminService.updateCourse(numericId(req.params.id), req.body);
+  const row = await adminService.updateCourse(numericId(req.params.id), req.body, req.user.universityId);
   if (!row) throw new HttpError(404, 'Course not found');
   res.json(row);
 }));
 adminRouter.delete('/courses/:id', asyncHandler(async (req, res) => {
-  const ok = await adminService.deleteCourse(numericId(req.params.id));
+  const ok = await adminService.deleteCourse(numericId(req.params.id), req.user.universityId);
   if (!ok) throw new HttpError(404, 'Course not found');
   res.status(204).end();
 }));
@@ -69,10 +69,10 @@ adminRouter.delete('/timetable-slots/:id', asyncHandler(async (req, res) => {
 }));
 
 adminRouter.get('/timetable-change-requests', asyncHandler(async (req, res) => {
-  res.json(await adminService.listTimetableChangeRequests(req.query.status));
+  res.json(await adminService.listTimetableChangeRequests(req.query.status, req.user.universityId));
 }));
 adminRouter.patch('/timetable-change-requests/:id', asyncHandler(async (req, res) => {
-  const row = await adminService.resolveTimetableChangeRequest(numericId(req.params.id), req.body.status, req.body.adminNote);
+  const row = await adminService.resolveTimetableChangeRequest(numericId(req.params.id), req.body.status, req.body.adminNote, req.user.universityId);
   if (!row) throw new HttpError(400, 'Invalid request id or status');
   res.json(row);
 }));
@@ -92,7 +92,7 @@ adminRouter.delete('/exams/:id', asyncHandler(async (req, res) => {
   res.status(204).end();
 }));
 adminRouter.post('/exams/:id/generate-seating', asyncHandler(async (req, res) => {
-  const result = await adminService.generateExamSeating(numericId(req.params.id));
+  const result = await adminService.generateExamSeating(numericId(req.params.id), req.user.universityId);
   if (!result) throw new HttpError(404, 'Exam not found');
   res.json(result);
 }));
@@ -102,12 +102,12 @@ adminRouter.post('/notices', asyncHandler(async (req, res) => {
   res.status(201).json(await adminService.createNotice(req.body, req.user.universityId));
 }));
 adminRouter.patch('/notices/:id', asyncHandler(async (req, res) => {
-  const row = await adminService.updateNotice(numericId(req.params.id), req.body);
+  const row = await adminService.updateNotice(numericId(req.params.id), req.body, req.user.universityId);
   if (!row) throw new HttpError(404, 'Notice not found');
   res.json(row);
 }));
 adminRouter.delete('/notices/:id', asyncHandler(async (req, res) => {
-  const ok = await adminService.deleteNotice(numericId(req.params.id));
+  const ok = await adminService.deleteNotice(numericId(req.params.id), req.user.universityId);
   if (!ok) throw new HttpError(404, 'Notice not found');
   res.status(204).end();
 }));

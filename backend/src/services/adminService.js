@@ -3,16 +3,22 @@ import { toPublicUser } from './authService.js';
 import { ROLES } from '../utils/roles.js';
 import * as notificationService from './academicNotificationService.js';
 
-export async function listUsers({ status, role } = {}) {
+// A university_admin passes their universityId (scoped); platform_admin passes null (all).
+export async function listUsers({ status, role, universityId } = {}) {
   let query = db('users').select('*').orderBy('created_at', 'desc');
   if (status) query = query.where({ status });
   if (role) query = query.where({ role });
+  if (universityId) query = query.where({ university_id: universityId });
   const rows = await query;
   return rows.map(toPublicUser);
 }
 
-export async function updateUserStatus(userId, status) {
+export async function updateUserStatus(userId, status, actorUniversityId) {
   if (!['pending', 'active', 'suspended'].includes(status)) return null;
+  const target = await db('users').where({ id: userId }).first();
+  if (!target) return null;
+  // A university_admin may only act on users in their own university.
+  if (actorUniversityId && target.university_id !== actorUniversityId) return null;
   const [row] = await db('users').where({ id: userId }).update({ status }).returning('*');
   return row ? toPublicUser(row) : null;
 }
@@ -42,19 +48,24 @@ export async function createCourse(data, universityId) {
   return row;
 }
 
-export async function updateCourse(id, data) {
+// `actorUniversityId` set (university_admin) restricts the action to that university's rows.
+const ownScope = (actorUniversityId) => (q) => {
+  if (actorUniversityId) q.andWhere({ university_id: actorUniversityId });
+};
+
+export async function updateCourse(id, data, actorUniversityId) {
   const patch = {};
   if (data.code !== undefined) patch.code = data.code;
   if (data.title !== undefined) patch.title = data.title;
   if (data.lecturerName !== undefined) patch.lecturer_name = data.lecturerName;
   if (data.icon !== undefined) patch.icon = data.icon;
   if (data.colorKey !== undefined) patch.color_key = data.colorKey;
-  const [row] = await db('courses').where({ id }).update(patch).returning('*');
+  const [row] = await db('courses').where({ id }).modify(ownScope(actorUniversityId)).update(patch).returning('*');
   return row ?? null;
 }
 
-export async function deleteCourse(id) {
-  const count = await db('courses').where({ id }).del();
+export async function deleteCourse(id, actorUniversityId) {
+  const count = await db('courses').where({ id }).modify(ownScope(actorUniversityId)).del();
   return count > 0;
 }
 
@@ -113,11 +124,21 @@ export async function deleteExam(id) {
 }
 
 /** Auto-assigns sequential seats (row of 10) to every student for an exam's course. */
-export async function generateExamSeating(examId) {
-  const exam = await db('exams').where({ id: examId }).first();
+export async function generateExamSeating(examId, actorUniversityId) {
+  const exam = await db('exams')
+    .join('courses', 'courses.id', 'exams.course_id')
+    .where('exams.id', examId)
+    .first('exams.id', 'courses.university_id as university_id');
   if (!exam) return null;
+  // Guard: a university_admin can only seat their own university's exams.
+  if (actorUniversityId && exam.university_id !== actorUniversityId) return null;
 
-  const students = await db('users').where({ role: 'student', status: 'active' }).orderBy('student_id').select('id');
+  // Seat only the students of THIS exam's university (not every student on the platform).
+  const students = await db('users')
+    .where({ role: 'student', status: 'active' })
+    .modify((q) => { if (exam.university_id) q.andWhere({ university_id: exam.university_id }); })
+    .orderBy('student_id')
+    .select('id');
   await db('exam_seats').where({ exam_id: examId }).del();
 
   const seats = students.map((s, idx) => {
@@ -147,18 +168,18 @@ export async function createNotice(data, universityId) {
   return row;
 }
 
-export async function updateNotice(id, data) {
+export async function updateNotice(id, data, actorUniversityId) {
   const patch = {};
   if (data.title !== undefined) patch.title = data.title;
   if (data.body !== undefined) patch.body = data.body;
   if (data.category !== undefined) patch.category = data.category;
   if (data.priority !== undefined) patch.priority = data.priority;
-  const [row] = await db('notices').where({ id }).update(patch).returning('*');
+  const [row] = await db('notices').where({ id }).modify(ownScope(actorUniversityId)).update(patch).returning('*');
   return row ?? null;
 }
 
-export async function deleteNotice(id) {
-  const count = await db('notices').where({ id }).del();
+export async function deleteNotice(id, actorUniversityId) {
+  const count = await db('notices').where({ id }).modify(ownScope(actorUniversityId)).del();
   return count > 0;
 }
 
@@ -176,32 +197,44 @@ export async function verifyCompany(companyId, verified) {
   return row ?? null;
 }
 
-export async function listTimetableChangeRequests(status) {
+export async function listTimetableChangeRequests(status, universityId) {
   let query = db('timetable_change_requests')
     .join('courses', 'courses.id', 'timetable_change_requests.course_id')
     .join('users', 'users.id', 'timetable_change_requests.lecturer_id')
     .select('timetable_change_requests.*', 'courses.code as course_code', 'courses.title as course_title', 'users.full_name as lecturer_name')
     .orderBy('timetable_change_requests.created_at', 'desc');
   if (status) query = query.where('timetable_change_requests.status', status);
+  if (universityId) query = query.andWhere('courses.university_id', universityId); // tenant scope
   return query;
 }
 
-export async function resolveTimetableChangeRequest(id, status, adminNote) {
+export async function resolveTimetableChangeRequest(id, status, adminNote, actorUniversityId) {
   if (!['approved', 'rejected'].includes(status)) return null;
+  // Guard: a university_admin can only resolve requests for their university's courses.
+  if (actorUniversityId) {
+    const owns = await db('timetable_change_requests')
+      .join('courses', 'courses.id', 'timetable_change_requests.course_id')
+      .where('timetable_change_requests.id', id)
+      .andWhere('courses.university_id', actorUniversityId)
+      .first('timetable_change_requests.id');
+    if (!owns) return null;
+  }
   const [row] = await db('timetable_change_requests').where({ id }).update({ status, admin_note: adminNote }).returning('*');
   return row ?? null;
 }
 
 /* ---- stats / settings ---- */
 
-export async function getStats() {
+export async function getStats(universityId) {
+  // Scope user counts to the admin's university (platform_admin: universityId null → all).
+  const scopeUsers = (q) => (universityId ? q.where({ university_id: universityId }) : q);
   const [usersByRole, usersByStatus, [{ count: posts }], [{ count: clubs }], [{ count: opportunities }], [{ count: pending }]] = await Promise.all([
-    db('users').select('role').count('* as count').groupBy('role'),
-    db('users').select('status').count('* as count').groupBy('status'),
+    scopeUsers(db('users').select('role').count('* as count').groupBy('role')),
+    scopeUsers(db('users').select('status').count('* as count').groupBy('status')),
     db('posts').count('* as count'),
     db('clubs').count('* as count'),
     db('opportunities').count('* as count'),
-    db('users').where({ status: 'pending' }).count('* as count'),
+    scopeUsers(db('users').where({ status: 'pending' }).count('* as count')),
   ]);
 
   return {
