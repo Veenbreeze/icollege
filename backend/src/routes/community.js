@@ -15,11 +15,11 @@ communityRouter.use(requireAuth);
 const upload = createUploader('posts');
 
 communityRouter.get('/chambers', asyncHandler(async (req, res) => {
-  res.json(await communityService.listChambers(req.user.id));
+  res.json(await communityService.listChambers(req.user.id, req.user.universityId));
 }));
 
 communityRouter.get('/chambers/:slug', asyncHandler(async (req, res) => {
-  const chamber = await communityService.getChamber(req.params.slug, req.user.id);
+  const chamber = await communityService.getChamber(req.params.slug, req.user.id, req.user.universityId);
   if (!chamber) throw new HttpError(404, 'Chamber not found');
   res.json(chamber);
 }));
@@ -31,7 +31,7 @@ communityRouter.post('/chambers/:slug/join', asyncHandler(async (req, res) => {
 }));
 
 communityRouter.get('/chambers/:slug/posts', asyncHandler(async (req, res) => {
-  const posts = await communityService.listPosts(req.params.slug, req.user.id, req.query.tag);
+  const posts = await communityService.listPosts(req.params.slug, req.user.id, req.query.tag, req.user.universityId);
   if (!posts) throw new HttpError(404, 'Chamber not found');
   res.json(posts);
 }));

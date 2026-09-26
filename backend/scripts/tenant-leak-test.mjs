@@ -60,6 +60,19 @@ async function run() {
     check(`notices are non-empty and own-scoped`, Array.isArray(notices) && notices.length > 0);
   }
 
+  // Social layer: a university-scoped chamber (icu-cs-dept, ICU-only) and its reel
+  // must be invisible to the other university, while national chambers are shared.
+  console.log('\nSocial layer (chambers/reels scope):');
+  const [icuChambers, uitChambers, uitReels] = await Promise.all([
+    get(tokenA, '/api/community/chambers'),
+    get(tokenB, '/api/community/chambers'),
+    get(tokenB, '/api/reels'),
+  ]);
+  check('ICU student sees ICU university chamber', includes(icuChambers, 'ICU CS Department'));
+  check('UIT student does NOT see ICU university chamber', !includes(uitChambers, 'ICU CS Department'));
+  check('UIT student does NOT see ICU-only reel', !includes(uitReels, 'ICU-ONLY REEL'));
+  check('both students see national chambers', includes(icuChambers, 'Social Life') && includes(uitChambers, 'Social Life'));
+
   console.log(`\n${failures === 0 ? 'ALL ISOLATION CHECKS PASSED ✅' : `${failures} LEAK(S) DETECTED ❌`}`);
   process.exit(failures === 0 ? 0 : 1);
 }

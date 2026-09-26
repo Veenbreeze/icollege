@@ -45,8 +45,12 @@ row to a default **iCollege University** (id 1), so nothing broke.
   403 other-uni/non-owner, 404 old static path. Leak test extended to cover these.
 - ⬜ **Talent search** — decide: national (employers hire cross-university, current) vs
   scoped. Currently returns all open students; confirm intended visibility.
-- ⬜ **Chambers / posts / reels / stories** — add `scope` (national vs university) for the
-  social-layer phases (9/10); national is the default social experience.
+- ✅ **Chambers / posts / reels** — `scope` added (migration `0017`): `national` (cross-
+  university social layer) vs `university` (visible only within one university). Existing
+  chambers backfilled to national. Reads scoped: `listChambers` (national + own-university),
+  `getChamber`/`listPosts` (404 for outsiders), `listReels` (national/no-chamber + own-
+  university). Verified by 4 new leak-test checks. TODO: block *posting* to a university
+  chamber you can't see (createPost visibility check); scope `stories` (currently national).
 - ⬜ **H3 login identity** — make `(university_id, student_id)` the unique key and select
   university at login, so IDs can repeat across universities.
 - ⬜ **H4 signup binding** — bind signup to a university via verified email domain
@@ -61,5 +65,10 @@ The test needs a second university. One-time:
 INSERT INTO universities (name, slug, short_name, email_domains, country, color_key)
 VALUES ('Uhuru Institute of Technology','uhuru-institute','UIT','{uit.ac.tz}','Tanzania','blue');
 -- + a UIT student, course, timetable slot, exam, notice (see git history / seed).
+-- Social-layer fixture: an ICU-only chamber with a post + reel:
+INSERT INTO chambers (slug,name,tagline,description,theme_key,emoji,scope,university_id)
+VALUES ('icu-cs-dept','ICU CS Department','Internal ICU CS','ICU CS only','tech','💻','university',1);
+-- + a post ('ICU-ONLY POST') and reel ('ICU-ONLY REEL') in that chamber.
 ```
-Then: `node backend/scripts/tenant-leak-test.mjs`
+Then: `API_URL=http://localhost:4001 node backend/scripts/tenant-leak-test.mjs`
+(covers 18 checks: academic reads + social chamber/reel scope).

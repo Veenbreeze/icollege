@@ -5,8 +5,19 @@ import { notifyMany, notifyOwner } from './notificationsService.js';
 import { initialsOf } from '../utils/names.js';
 import { publicUrlFor } from '../middleware/upload.js';
 
-export async function listChambers(userId) {
-  const chambers = await db('chambers').select('*').orderBy('name');
+/** A chamber is visible to a user if it's national or belongs to their university. */
+function visibleChamberFilter(universityId) {
+  return function () {
+    this.where('scope', 'national');
+    if (universityId) this.orWhere('university_id', universityId);
+  };
+}
+
+export async function listChambers(userId, universityId) {
+  const chambers = await db('chambers')
+    .where(visibleChamberFilter(universityId))
+    .select('*')
+    .orderBy('name');
   const [memberSet, countMap] = await Promise.all([
     pluckSet('chamber_members', { user_id: userId }, 'chamber_id'),
     countByColumn('chamber_members', 'chamber_id'),
@@ -28,9 +39,15 @@ async function findChamberBySlug(slug) {
   return db('chambers').where({ slug }).first();
 }
 
-export async function getChamber(slug, userId) {
+/** True when a national chamber, or a university chamber the viewer belongs to. */
+function chamberVisibleTo(chamber, universityId) {
+  return chamber.scope === 'national' || (!!universityId && chamber.university_id === universityId);
+}
+
+export async function getChamber(slug, userId, universityId) {
   const chamber = await findChamberBySlug(slug);
   if (!chamber) return null;
+  if (!chamberVisibleTo(chamber, universityId)) return null; // tenant scope
 
   const [{ count: memberCount }] = await db('chamber_members').where({ chamber_id: chamber.id }).count('* as count');
   const [{ count: postCount }] = await db('posts').where({ chamber_id: chamber.id }).count('* as count');
@@ -83,9 +100,10 @@ async function attachPostMeta(rows, userId) {
   }));
 }
 
-export async function listPosts(slug, userId, tag) {
+export async function listPosts(slug, userId, tag, universityId) {
   const chamber = await findChamberBySlug(slug);
   if (!chamber) return null;
+  if (!chamberVisibleTo(chamber, universityId)) return null; // tenant scope
 
   let query = db('posts')
     .join('users', 'users.id', 'posts.author_id')

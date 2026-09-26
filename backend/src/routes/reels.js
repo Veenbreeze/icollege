@@ -32,7 +32,7 @@ reelsRouter.post('/stories/:id/view', asyncHandler(async (req, res) => {
 }));
 
 reelsRouter.get('/reels', asyncHandler(async (req, res) => {
-  res.json(await reelsService.listReels(req.user.id));
+  res.json(await reelsService.listReels(req.user.id, req.user.universityId));
 }));
 
 reelsRouter.get('/users/me/reels', asyncHandler(async (req, res) => {

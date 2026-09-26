@@ -113,8 +113,15 @@ function reelListQuery() {
     .select('reels.*', 'users.full_name as author_name', 'users.username as author_username', 'chambers.name as chamber_name');
 }
 
-export async function listReels(userId) {
-  const rows = await reelListQuery().orderBy('reels.created_at', 'desc');
+export async function listReels(userId, universityId) {
+  // A reel is visible if it has no chamber (personal/national), is in a national
+  // chamber, or is in a chamber belonging to the viewer's university.
+  const rows = await reelListQuery()
+    .where(function () {
+      this.whereNull('reels.chamber_id').orWhere('chambers.scope', 'national');
+      if (universityId) this.orWhere('chambers.university_id', universityId);
+    })
+    .orderBy('reels.created_at', 'desc');
   return attachReelMeta(rows, userId);
 }
 
