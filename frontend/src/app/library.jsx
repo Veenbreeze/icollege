@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { useApi } from '@/hooks/useApi';
 import { fetchLibrary } from '@/lib/api/library';
 import { resolveMediaUrl } from '@/lib/api/client';
+import { getSignedFileUrl } from '@/lib/api/files';
 
 const ICON_FOR = {
   pdf: { icon: 'document-text', color: colors.red },
@@ -42,9 +43,15 @@ export default function LibraryScreen() {
   const courses = Object.keys(grouped);
   const isEmpty = !isLoading && (error || materials.length === 0);
 
-  function open(m) {
-    const url = resolveMediaUrl(m.url ?? m.storagePath);
-    if (url) Linking.openURL(url).catch(() => {});
+  async function open(m) {
+    try {
+      // Course materials are access-controlled — fetch a short-lived signed URL,
+      // then open it directly (the signed token stands in for the auth header).
+      const url = await getSignedFileUrl(m.url);
+      if (url) Linking.openURL(url).catch(() => {});
+    } catch {
+      // access denied / expired — silently ignore (the list already reflects access)
+    }
   }
 
   return (

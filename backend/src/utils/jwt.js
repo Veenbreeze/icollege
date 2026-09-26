@@ -17,6 +17,18 @@ export function verifyAccessToken(token) {
   return jwt.verify(token, env.jwtAccessSecret);
 }
 
+/**
+ * Short-lived, file-specific token so a client can open a protected download URL
+ * directly (no Authorization header). Bound to one file id + the requesting user.
+ */
+export function signFileToken({ userId, universityId, fileId }) {
+  return jwt.sign(
+    { sub: userId, universityId: universityId ?? null, fid: fileId, kind: 'file' },
+    env.jwtAccessSecret,
+    { expiresIn: '5m' },
+  );
+}
+
 export function generateRefreshToken() {
   const token = crypto.randomBytes(48).toString('hex');
   const tokenHash = hashToken(token);
