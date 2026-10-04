@@ -6,7 +6,7 @@ const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export function signAccessToken(user) {
-  return jwt.sign({ sub: user.id, studentId: user.student_id, role: user.role }, env.jwtAccessSecret, {
+  return jwt.sign({ sub: user.id, studentId: user.student_id, role: user.role, universityId: user.university_id }, env.jwtAccessSecret, {
     expiresIn: ACCESS_TOKEN_TTL,
   });
 }

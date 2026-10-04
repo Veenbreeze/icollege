@@ -8,7 +8,10 @@
     "dev": "nodemon src/server.js",
     "migrate": "knex --knexfile src/db/knexfile.js migrate:latest",
     "migrate:rollback": "knex --knexfile src/db/knexfile.js migrate:rollback",
-    "seed": "knex --knexfile src/db/knexfile.js seed:run"
+    "seed": "knex --knexfile src/db/knexfile.js seed:run",
+    "seed:testing": "node src/db/seedTestingData.js",
+    "bootstrap:platform-admin": "node src/db/bootstrapPlatformAdmin.js",
+    "test": "node --test"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

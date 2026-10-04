@@ -9,18 +9,18 @@ export const chatRouter = Router();
 chatRouter.use(requireAuth);
 
 chatRouter.get('/threads', asyncHandler(async (req, res) => {
-  res.json(await chatService.listThreads(req.user.id));
+  res.json(await chatService.listThreads(req.user));
 }));
 
 chatRouter.get('/threads/:id', asyncHandler(async (req, res) => {
-  const thread = await chatService.getThread(numericId(req.params.id), req.user.id);
+  const thread = await chatService.getThread(numericId(req.params.id), req.user);
   if (!thread) throw new HttpError(404, 'Thread not found');
   res.json(thread);
 }));
 
 chatRouter.get('/threads/:id/messages', asyncHandler(async (req, res) => {
   const after = req.query.after ? numericId(req.query.after) : undefined;
-  const messages = await chatService.listMessages(numericId(req.params.id), req.user.id, after);
+  const messages = await chatService.listMessages(numericId(req.params.id), req.user, after);
   if (!messages) throw new HttpError(404, 'Thread not found');
   res.json(messages);
 }));
@@ -28,7 +28,7 @@ chatRouter.get('/threads/:id/messages', asyncHandler(async (req, res) => {
 chatRouter.post('/threads/:id/messages', asyncHandler(async (req, res) => {
   const { text } = req.body;
   if (!text?.trim()) throw new HttpError(400, 'text is required');
-  const message = await chatService.sendMessage(numericId(req.params.id), req.user.id, text.trim());
+  const message = await chatService.sendMessage(numericId(req.params.id), req.user, text.trim());
   if (!message) throw new HttpError(404, 'Thread not found');
   res.status(201).json(message);
 }));

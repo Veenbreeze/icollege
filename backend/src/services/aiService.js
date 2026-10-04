@@ -1,13 +1,14 @@
 import { db } from '../db/pool.js';
 import { countByColumn } from '../db/queryHelpers.js';
+import { visibleNotice } from './visibilityService.js';
 
 const STOPWORDS = new Set(['find', 'the', 'a', 'an', 'for', 'in', 'on', 'me', 'to', 'of', 'and', 'who', 'closing', 'this', 'month', 'students']);
 
 function keywords(query) {
-  return query
+  return String(query ?? '').slice(0, 200)
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w)).slice(0, 10);
 }
 
 /**
@@ -29,10 +30,12 @@ const SEARCH_DOMAINS = [
   },
   {
     label: 'Clubs', table: 'clubs', columns: ['name', 'category'],
+    tenantColumn: 'university_id',
     map: (c) => ({ id: `club-${c.id}`, title: c.name, subtitle: c.category, category: 'Club', icon: 'people', colorKey: c.color_key, route: '/clubs' }),
   },
   {
     label: 'Events', table: 'events', columns: ['title', 'type'],
+    tenantColumn: 'university_id',
     map: (e) => ({ id: `event-${e.id}`, title: e.title, subtitle: new Date(e.event_date).toDateString(), category: 'Event', icon: 'calendar', colorKey: e.color_key, route: '/clubs' }),
   },
   {
@@ -41,9 +44,17 @@ const SEARCH_DOMAINS = [
   },
 ];
 
-async function searchDomain(domain, userId, words) {
+async function searchDomain(domain, user, words) {
   let query = db(domain.table);
-  if (domain.scopeToUser) query = query.where({ user_id: userId });
+  if (domain.scopeToUser) query = query.where({ user_id: user.id });
+  if (domain.tenantColumn) query = query.where(domain.tenantColumn, user.universityId);
+  if (domain.table === 'opportunities') query = query.andWhere(function () {
+    this.where('visibility', 'national').orWhere({ visibility: 'university', university_id: user.universityId });
+  });
+  if (domain.table === 'projects') query = query.andWhere(function () {
+    this.where('projects.visibility', 'national').orWhere({ 'projects.visibility': 'university', 'projects.university_id': user.universityId });
+  });
+  if (domain.table === 'notices') query = visibleNotice(query, user);
 
   query = query
     .where((qb) => {
@@ -59,15 +70,16 @@ async function searchDomain(domain, userId, words) {
   return query;
 }
 
-export async function search(userId, query) {
+export async function search(user, query) {
   const words = keywords(query);
   if (words.length === 0) return { interpretation: 'No search terms recognized', results: [] };
 
   const results = [];
   const matchedLabels = new Set();
 
-  for (const domain of SEARCH_DOMAINS) {
-    const rows = await searchDomain(domain, userId, words);
+  const domainRows = await Promise.all(SEARCH_DOMAINS.map((domain) => searchDomain(domain, user, words)));
+  for (const [index, domain] of SEARCH_DOMAINS.entries()) {
+    const rows = domainRows[index];
     if (rows.length > 0) matchedLabels.add(domain.label);
     rows.forEach((row) => results.push(domain.map(row)));
   }
@@ -79,8 +91,13 @@ export async function search(userId, query) {
   return { interpretation, results };
 }
 
-export async function listStudyCourses() {
-  const courses = await db('courses').select('*');
+export async function listStudyCourses(user) {
+  let coursesQuery = db('courses').where({ 'courses.university_id': user.universityId });
+  if (user.role === 'student') coursesQuery = coursesQuery.join('student_course_enrollments as enrollment', function () {
+    this.on('enrollment.course_id', '=', 'courses.id').andOn('enrollment.student_id', '=', db.raw('?', [user.id]));
+  }).andWhere('enrollment.university_id', user.universityId).andWhere('enrollment.status', 'active');
+  else if (user.role === 'lecturer') coursesQuery = coursesQuery.where({ lecturer_id: user.id });
+  const courses = await coursesQuery.select('courses.*');
   const [fMap, qMap] = await Promise.all([
     countByColumn('flashcards', 'course_id'),
     countByColumn('quiz_questions', 'course_id'),
@@ -97,8 +114,12 @@ export async function listStudyCourses() {
   }));
 }
 
-export async function getCourseStudy(courseId) {
-  const course = await db('courses').where({ id: courseId }).first();
+export async function getCourseStudy(courseId, user) {
+  const allowed = user.role === 'student'
+    ? await db('student_course_enrollments').where({ course_id: courseId, student_id: user.id, university_id: user.universityId, status: 'active' }).first()
+    : await db('courses').where({ id: courseId, university_id: user.universityId, ...(user.role === 'lecturer' ? { lecturer_id: user.id } : {}) }).first();
+  if (!allowed) return null;
+  const course = await db('courses').where({ id: courseId, university_id: user.universityId }).first();
   if (!course) return null;
 
   const flashcards = await db('flashcards').where({ course_id: courseId });
@@ -115,10 +136,14 @@ export async function getCourseStudy(courseId) {
   };
 }
 
-async function buildRevisionPlan(userId) {
+async function buildRevisionPlan(user) {
   const exams = await db('exams')
     .join('courses', 'courses.id', 'exams.course_id')
+    .join('student_course_enrollments as enrollment', function () {
+      this.on('enrollment.course_id', '=', 'courses.id').andOn('enrollment.student_id', '=', db.raw('?', [user.id]));
+    })
     .where('exams.exam_date', '>=', new Date().toISOString().slice(0, 10))
+    .andWhere('courses.university_id', user.universityId).andWhere('enrollment.university_id', user.universityId).andWhere('enrollment.status', 'active')
     .select('exams.exam_date', 'courses.title')
     .orderBy('exams.exam_date')
     .limit(5);
@@ -129,10 +154,12 @@ async function buildRevisionPlan(userId) {
   return `Here's a revision plan based on your real exam schedule:\n\n${lines.join('\n')}\n\nOpen Exams to see full details.`;
 }
 
-async function opportunityMatches(userId) {
-  const skills = await db('user_skills').where({ user_id: userId }).pluck('skill');
+async function opportunityMatches(user) {
+  const skills = await db('user_skills').where({ user_id: user.id }).pluck('skill');
   const skillSet = new Set(skills.map((s) => s.toLowerCase()));
-  const opps = await db('opportunities').select('*');
+  const opps = await db('opportunities').where(function () {
+    this.where('visibility', 'national').orWhere({ visibility: 'university', university_id: user.universityId });
+  }).select('*');
 
   const scored = opps
     .map((o) => ({
@@ -150,14 +177,19 @@ async function opportunityMatches(userId) {
 }
 
 /** Finds the course named in `text` (by first word of its title), else the first course. */
-async function resolveMentionedCourse(text) {
-  const courses = await db('courses').select('*');
+async function resolveMentionedCourse(text, user) {
+  let query = db('courses').where({ 'courses.university_id': user.universityId });
+  if (user.role === 'student') query = query.join('student_course_enrollments as enrollment', function () {
+    this.on('enrollment.course_id', '=', 'courses.id').andOn('enrollment.student_id', '=', db.raw('?', [user.id]));
+  }).andWhere('enrollment.university_id', user.universityId).andWhere('enrollment.status', 'active');
+  else if (user.role === 'lecturer') query = query.where({ 'courses.lecturer_id': user.id });
+  const courses = await query.select('courses.*');
   const mentioned = courses.find((c) => text.toLowerCase().includes(c.title.toLowerCase().split(' ')[0]));
   return mentioned ?? courses[0] ?? null;
 }
 
-async function courseSummaryReply(text) {
-  const course = await resolveMentionedCourse(text);
+async function courseSummaryReply(text, user) {
+  const course = await resolveMentionedCourse(text, user);
   if (!course) return "You don't have any courses set up yet.";
 
   const flashcards = await db('flashcards').where({ course_id: course.id }).limit(4);
@@ -167,8 +199,8 @@ async function courseSummaryReply(text) {
   return `Summary of "${course.title}" from your study material:\n\n${lines.join('\n')}\n\nOpen Study Assistant for flashcards and a quiz.`;
 }
 
-async function quizReply(text) {
-  const course = await resolveMentionedCourse(text);
+async function quizReply(text, user) {
+  const course = await resolveMentionedCourse(text, user);
   if (!course) return "You don't have any courses set up yet.";
 
   const questions = await db('quiz_questions').where({ course_id: course.id }).limit(3);
@@ -178,12 +210,12 @@ async function quizReply(text) {
   return `Here's a quick quiz on ${course.title}:\n\n${lines.join('\n')}\n\nOpen Study Assistant for the full interactive quiz with instant marking.`;
 }
 
-export async function chatReply(userId, text) {
+export async function chatReply(user, text) {
   const t = text.toLowerCase();
-  if (/internship|job|scholarship|opportunit|career/.test(t)) return opportunityMatches(userId);
-  if (/quiz/.test(t)) return quizReply(t);
-  if (/summar|notes/.test(t)) return courseSummaryReply(t);
-  if (/revision plan|study plan|revision schedule/.test(t)) return buildRevisionPlan(userId);
+  if (/internship|job|scholarship|opportunit|career/.test(t)) return opportunityMatches(user);
+  if (/quiz/.test(t)) return quizReply(t, user);
+  if (/summar|notes/.test(t)) return courseSummaryReply(t, user);
+  if (/revision plan|study plan|revision schedule/.test(t)) return buildRevisionPlan(user);
 
   return "I can help with study summaries, quizzes, revision plans and matching you to real opportunities, all pulled from your actual courses and profile. Try one of the tools below, or ask about a specific course.";
 }

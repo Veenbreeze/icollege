@@ -13,6 +13,7 @@ import { adminRouter } from './admin.js';
 import { lecturerRouter } from './lecturer.js';
 import { clubAdminRouter } from './clubAdmin.js';
 import { employerRouter } from './employer.js';
+import { musicRouter } from './music.js';
 
 /** All /api sub-routers in one place, so app.js doesn't grow a new
  * import + mount line every time a domain is added. */
@@ -32,3 +33,4 @@ apiRouter.use('/admin', adminRouter);
 apiRouter.use('/lecturer', lecturerRouter);
 apiRouter.use('/club-admin', clubAdminRouter);
 apiRouter.use('/employer', employerRouter);
+apiRouter.use('/music', musicRouter);
