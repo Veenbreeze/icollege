@@ -55,6 +55,8 @@ export default function StoryViewerScreen() {
 
   const group = groups[groupIndex];
   const story = group?.stories[storyIndex];
+  const storyId = story?.id;
+  const isVideoStory = story?.mediaType === 'video';
 
   const progress = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -89,24 +91,24 @@ export default function StoryViewerScreen() {
   // this effect too, and must resume from wherever the animation was, not restart from zero.
   const prevStoryIdRef = useRef(null);
   useEffect(() => {
-    if (!story) return;
+    if (!storyId) return;
     cancelAnimation(progress);
-    if (prevStoryIdRef.current !== story.id) {
-      prevStoryIdRef.current = story.id;
+    if (prevStoryIdRef.current !== storyId) {
+      prevStoryIdRef.current = storyId;
       progress.value = 0;
     }
-    if (story.mediaType === 'video') return; // driven externally by VideoPlayer's onProgress
+    if (isVideoStory) return; // driven externally by VideoPlayer's onProgress
     if (paused) return;
     const remainingMs = (1 - progress.value) * IMAGE_DURATION_MS;
     progress.value = withTiming(1, { duration: remainingMs, easing: Easing.linear }, (finished) => {
       if (finished) runOnJS(goNext)();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [story?.id, paused]);
+  }, [storyId, isVideoStory, paused]);
 
   useEffect(() => {
-    if (story) viewStory(story.id).catch(() => {});
-  }, [story?.id]);
+    if (storyId) viewStory(storyId).catch(() => {});
+  }, [storyId]);
 
   const onPressIn = () => {
     pressStartAt.current = Date.now();
@@ -173,6 +175,8 @@ export default function StoryViewerScreen() {
                 style={StyleSheet.absoluteFillObject}
                 onEnd={goNext}
                 onProgress={(p) => {
+                  // Reanimated shared values are intentionally updated from the media callback.
+                  // eslint-disable-next-line react-hooks/immutability
                   progress.value = p;
                 }}
               />

@@ -34,8 +34,7 @@ export default function CreateStoryScreen() {
         fallbackType: isVideo ? 'video/mp4' : 'image/jpeg',
       });
       await createStory(form);
-      if (router.canGoBack()) router.back();
-      else router.replace('/reels');
+      router.replace('/reels');
     } catch (e) {
       Alert.alert('Could not post story', e.message ?? 'Something went wrong');
     } finally {

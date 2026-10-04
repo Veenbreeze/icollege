@@ -134,7 +134,7 @@ export default function AiStudyScreen() {
         {activeCourse && (
           <View style={styles.generatedRow}>
             <Ionicons name="sparkles" size={13} color={colors.primary} />
-            <Text style={styles.generatedText}>From your real "{activeCourse.title}" study material</Text>
+            <Text style={styles.generatedText}>From your real &quot;{activeCourse.title}&quot; study material</Text>
           </View>
         )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, Modal, Animated, Switch, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,12 +17,11 @@ export function AppDrawer({ visible, onClose }) {
   const { user, logout } = useAuth();
   const styles = drawerStyles;
   const NAV = NAV_ITEMS.filter((i) => i.showInDrawer && (!i.roles || i.roles.includes(user?.role)));
-  const translateX = useRef(new Animated.Value(-PANEL_WIDTH)).current;
-  const scrim = useRef(new Animated.Value(0)).current;
+  const [translateX] = useState(() => new Animated.Value(-PANEL_WIDTH));
+  const [scrim] = useState(() => new Animated.Value(0));
   const [rendered, setRendered] = useState(visible);
   useEffect(() => {
     if (visible) {
-      setRendered(true);
       Animated.parallel([
         Animated.timing(translateX, {
           toValue: 0,

@@ -65,7 +65,7 @@ const OPTIONS = [
     icon: 'chatbubbles-outline',
     color: colors.blue,
     soft: colors.blueSoft,
-    route: '/create-post',
+    route: { pathname: '/create-post', params: { tag: 'question' } },
   },
 ];
 export default function CreateScreen() {

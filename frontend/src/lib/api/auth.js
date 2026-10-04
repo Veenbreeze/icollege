@@ -1,10 +1,14 @@
 import { apiFetch } from './client';
-export function login(studentId, password) {
+export function listUniversities() {
+  return apiFetch('/api/auth/universities', { auth: false });
+}
+export function login(studentId, password, universitySlug) {
   return apiFetch('/api/auth/login', {
     method: 'POST',
     body: {
       studentId,
       password,
+      universitySlug,
     },
     auth: false,
   });
@@ -31,22 +35,24 @@ export function uploadAvatar(formData) {
     body: formData,
   });
 }
-export function forgotPassword(studentId) {
+export function forgotPassword(studentId, universitySlug) {
   return apiFetch('/api/auth/forgot-password', {
     method: 'POST',
     body: {
       studentId,
+      universitySlug,
     },
     auth: false,
   });
 }
-export function resetPassword(studentId, code, newPassword) {
+export function resetPassword(studentId, code, newPassword, universitySlug) {
   return apiFetch('/api/auth/reset-password', {
     method: 'POST',
     body: {
       studentId,
       code,
       newPassword,
+      universitySlug,
     },
     auth: false,
   });

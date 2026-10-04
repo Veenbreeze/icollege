@@ -18,4 +18,5 @@ export const env = {
   isProduction: (process.env.NODE_ENV || 'development') === 'production',
   gmailUser: process.env.GMAIL_USER,
   gmailAppPassword: process.env.GMAIL_APP_PASSWORD,
+  corsOrigins: (process.env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean),
 };

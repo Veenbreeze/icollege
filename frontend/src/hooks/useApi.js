@@ -34,7 +34,8 @@ export function useApi(fetcher, deps = []) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // The caller supplies semantic dependencies (such as a route ID) as an array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/use-memo
   }, deps);
   useEffect(() => load(), [load]);
   return {

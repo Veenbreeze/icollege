@@ -14,8 +14,8 @@ export default function EmployerConsoleScreen() {
   const { data: company, isLoading: loadingCompany } = useApi(fetchMyCompany);
   const { data: opportunities, isLoading: loadingOpps, refetch } = useApi(fetchMyOpportunities);
   const [role, setRole] = useState('');
-  const [type, setType] = useState('Internship');
-  const [category, setCategory] = useState('Internships');
+  const type = 'Internship';
+  const category = 'Internships';
   const [compTitle, setCompTitle] = useState('');
   const [busy, setBusy] = useState(false);
 

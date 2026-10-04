@@ -1,4 +1,5 @@
 import { db } from '../db/pool.js';
+import { visibleNotice } from './visibilityService.js';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -14,13 +15,20 @@ function to12Hour(hhmm) {
   return `${String(hour12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-export async function getTodayTimetable(now = new Date()) {
+export async function getTodayTimetable(user, now = new Date()) {
   const dayOfWeek = now.getDay();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const rows = await db('timetable_slots')
+  let query = db('timetable_slots')
     .join('courses', 'courses.id', 'timetable_slots.course_id')
     .where('timetable_slots.day_of_week', dayOfWeek)
+    .andWhere('courses.university_id', user.universityId);
+  if (user.role === 'student') {
+    query = query.join('student_course_enrollments as enrollment', function () {
+      this.on('enrollment.course_id', '=', 'courses.id').andOn('enrollment.student_id', '=', db.raw('?', [user.id]));
+    }).andWhere('enrollment.university_id', user.universityId).andWhere('enrollment.status', 'active');
+  }
+  const rows = await query
     .select(
       'timetable_slots.id', 'timetable_slots.start_time', 'timetable_slots.end_time',
       'timetable_slots.room', 'timetable_slots.type',
@@ -59,9 +67,16 @@ export async function getTodayTimetable(now = new Date()) {
   return { day: DAY_NAMES[dayOfWeek], classes };
 }
 
-export async function getWeekTimetable() {
-  const rows = await db('timetable_slots')
+export async function getWeekTimetable(user) {
+  let query = db('timetable_slots')
     .join('courses', 'courses.id', 'timetable_slots.course_id')
+    .where('courses.university_id', user.universityId);
+  if (user.role === 'student') {
+    query = query.join('student_course_enrollments as enrollment', function () {
+      this.on('enrollment.course_id', '=', 'courses.id').andOn('enrollment.student_id', '=', db.raw('?', [user.id]));
+    }).andWhere('enrollment.university_id', user.universityId).andWhere('enrollment.status', 'active');
+  }
+  const rows = await query
     .select(
       'timetable_slots.id', 'timetable_slots.day_of_week', 'timetable_slots.start_time', 'timetable_slots.end_time',
       'timetable_slots.room', 'timetable_slots.type',
@@ -85,18 +100,24 @@ export async function getWeekTimetable() {
   }));
 }
 
-export async function getExams(userId, now = new Date()) {
-  const rows = await db('exams')
+export async function getExams(user, now = new Date()) {
+  let query = db('exams')
     .join('courses', 'courses.id', 'exams.course_id')
     .leftJoin('exam_seats', function () {
-      this.on('exam_seats.exam_id', '=', 'exams.id').andOn('exam_seats.user_id', '=', db.raw('?', [userId]));
+      this.on('exam_seats.exam_id', '=', 'exams.id').andOn('exam_seats.user_id', '=', db.raw('?', [user.id]));
     })
-    .select(
+    .where('courses.university_id', user.universityId);
+  if (user.role === 'student') {
+    query = query.join('student_course_enrollments as enrollment', function () {
+      this.on('enrollment.course_id', '=', 'courses.id').andOn('enrollment.student_id', '=', db.raw('?', [user.id]));
+    }).andWhere('enrollment.university_id', user.universityId).andWhere('enrollment.status', 'active');
+  }
+  const rows = await query.select(
       'exams.id', 'exams.type', 'exams.exam_date', 'exams.exam_time', 'exams.duration', 'exams.venue', 'exams.room',
       'courses.code', 'courses.title', 'courses.icon', 'courses.color_key',
       'exam_seats.seat_label',
     )
-    .orderBy('exams.exam_date');
+    .orderBy('exams.exam_date').limit(200);
 
   const upcoming = rows
     .filter((r) => new Date(r.exam_date) >= new Date(now.toDateString()))
@@ -123,15 +144,21 @@ export async function getExams(userId, now = new Date()) {
   });
 }
 
-export async function getExamSeating(examId, userId) {
+export async function getExamSeating(examId, user) {
   const exam = await db('exams')
     .join('courses', 'courses.id', 'exams.course_id')
     .where('exams.id', examId)
+    .andWhere('courses.university_id', user.universityId)
+    .modify((query) => {
+      if (user.role === 'student') query.join('student_course_enrollments as enrollment', function () {
+        this.on('enrollment.course_id', '=', 'courses.id').andOn('enrollment.student_id', '=', db.raw('?', [user.id]));
+      }).andWhere('enrollment.university_id', user.universityId).andWhere('enrollment.status', 'active');
+    })
     .select('exams.*', 'courses.code', 'courses.title')
     .first();
   if (!exam) return null;
 
-  const seat = await db('exam_seats').where({ exam_id: examId, user_id: userId }).first();
+  const seat = await db('exam_seats').where({ exam_id: examId, user_id: user.id }).first();
 
   return {
     exam: exam.title,
@@ -145,13 +172,13 @@ export async function getExamSeating(examId, userId) {
   };
 }
 
-export async function getNotices(userId) {
-  const rows = await db('notices')
+export async function getNotices(user) {
+  const rows = await visibleNotice(db('notices'), user)
     .leftJoin('notice_reads', function () {
-      this.on('notice_reads.notice_id', '=', 'notices.id').andOn('notice_reads.user_id', '=', db.raw('?', [userId]));
+      this.on('notice_reads.notice_id', '=', 'notices.id').andOn('notice_reads.user_id', '=', db.raw('?', [user.id]));
     })
     .select('notices.*', 'notice_reads.read_at')
-    .orderBy('notices.published_at', 'desc');
+    .orderBy('notices.published_at', 'desc').limit(100);
 
   return rows.map((r) => ({
     id: `notice-${r.id}`,
@@ -166,9 +193,11 @@ export async function getNotices(userId) {
   }));
 }
 
-export async function markNoticeRead(noticeId, userId) {
+export async function markNoticeRead(noticeId, user) {
+  const notice = await visibleNotice(db('notices').where('notices.id', noticeId), user).first('notices.id');
+  if (!notice) return;
   await db('notice_reads')
-    .insert({ notice_id: noticeId, user_id: userId })
+    .insert({ notice_id: noticeId, user_id: user.id })
     .onConflict(['notice_id', 'user_id'])
     .ignore();
 }

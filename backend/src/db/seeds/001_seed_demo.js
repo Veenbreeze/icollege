@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 const DEMO_PASSWORD = 'Password123!';
 
 const TABLES_IN_DEPENDENCY_ORDER = [
+  'student_course_enrollments',
   'quiz_questions', 'flashcards',
   'user_education', 'user_competitions', 'user_certifications', 'user_experience', 'user_skills',
   'project_members', 'projects', 'opportunities',
@@ -157,13 +158,21 @@ export async function seed(knex) {
   const [education, economics, finance, social, music] = await knex('chambers')
     .insert([
       { slug: 'education', name: 'Education', tagline: 'Learn. Share. Grow.', description: 'A community for students passionate about learning and teaching.', theme_key: 'education', emoji: '🎓' },
-      { slug: 'economics', name: 'Economics', tagline: 'Learn. Discuss. Grow.', description: 'A community for students passionate about economics, business, markets and development.', theme_key: 'economics', emoji: '📈' },
+      { slug: 'economics', name: 'Economics', tagline: 'Learn. Discuss. Grow.', description: 'A national community for students passionate about economics, business, markets and development.', theme_key: 'economics', emoji: '📈', visibility: 'national' },
       { slug: 'finance', name: 'Finance', tagline: 'Invest in knowledge.', description: 'Everything money, markets and personal finance for students.', theme_key: 'finance', emoji: '💰' },
-      { slug: 'social', name: 'Social Life', tagline: 'Connect. Belong.', description: 'Campus life, events and making friends.', theme_key: 'social', emoji: '👥' },
-      { slug: 'music', name: 'Music', tagline: 'Feel the sound.', description: 'For music lovers, creators and performers on campus.', theme_key: 'music', emoji: '🎧' },
+      { slug: 'social', name: 'Social Life', tagline: 'Connect. Belong.', description: 'A national community for student life, culture, events and making friends across campuses.', theme_key: 'social', emoji: '👥', visibility: 'national' },
+      { slug: 'music', name: 'Music', tagline: 'Discover. Listen. Connect.', description: 'Explore music and connect with student listeners and creators. Song previews link to the official store listing.', theme_key: 'music', emoji: '🎧', visibility: 'national' },
+      { slug: 'ai', name: 'Artificial Intelligence', tagline: 'Imagine. Build. Share.', description: 'A national community for student interests in artificial intelligence, machine learning and responsible innovation.', theme_key: 'ai', emoji: '🤖', visibility: 'national' },
+      { slug: 'media', name: 'Media & Culture', tagline: 'Stories. Sound. Screen.', description: 'A national community for student creators, journalism, film, music and digital culture.', theme_key: 'media', emoji: '🎙️', visibility: 'national' },
     ])
     .returning('id')
     .then((rows) => rows.map((r) => r.id));
+
+  await knex('chambers').insert([
+    { slug: 'technology', name: 'Technology & Innovation', tagline: 'Build what comes next.', description: 'A national community for technology, engineering, computing, and innovation.', theme_key: 'technology', emoji: '💻', visibility: 'national' },
+    { slug: 'business', name: 'Business & Enterprise', tagline: 'Ideas into impact.', description: 'A national community for entrepreneurship, markets, and business.', theme_key: 'finance', emoji: '📈', visibility: 'national' },
+    { slug: 'sports', name: 'Sports & Wellness', tagline: 'Play, compete, belong.', description: 'A national community for student sports, fitness, and wellness.', theme_key: 'social', emoji: '⚽', visibility: 'national' },
+  ]);
 
   await knex('chamber_members').insert([
     { chamber_id: education, user_id: daniel },
@@ -357,6 +366,49 @@ export async function seed(knex) {
     { course_id: csc203, question: 'A B-tree lookup has what time complexity?', options: ['O(n)', 'O(log n)', 'O(1)', 'O(n²)'], answer_index: 1 },
     { course_id: csc203, question: 'Which join returns only matching rows?', options: ['LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'FULL JOIN'], answer_index: 2 },
   ]);
+
+  const [icu] = await knex('universities').insert({ slug: 'icu', name: 'iCollege University', status: 'active' })
+    .onConflict('slug').merge({ name: 'iCollege University', status: 'active' }).returning('id');
+  const [aru] = await knex('universities').insert({ slug: 'aru', name: 'Ardhi University', status: 'active' })
+    .onConflict('slug').merge({ name: 'Ardhi University', status: 'active' }).returning('id');
+  const [icuCampus] = await knex('campuses').insert({ university_id: icu.id, name: 'Main Campus', code: 'MAIN' })
+    .onConflict(['university_id', 'name']).merge().returning('id');
+  const [aruCampus] = await knex('campuses').insert({ university_id: aru.id, name: 'Main Campus', code: 'MAIN' })
+    .onConflict(['university_id', 'name']).merge().returning('id');
+  const [csDepartment] = await knex('departments').insert({ university_id: icu.id, name: 'Computer Science', code: 'CS' })
+    .onConflict(['university_id', 'name']).merge().returning('id');
+  const [econDepartment] = await knex('departments').insert({ university_id: icu.id, name: 'Economics', code: 'ECON' })
+    .onConflict(['university_id', 'name']).merge().returning('id');
+  const [landDepartment] = await knex('departments').insert({ university_id: aru.id, name: 'Land Management', code: 'LAND' })
+    .onConflict(['university_id', 'name']).merge().returning('id');
+  const [csProgramme] = await knex('programmes').insert({ university_id: icu.id, department_id: csDepartment.id, name: 'BSc Computer Science', code: 'BSCS' })
+    .onConflict(['university_id', 'name']).merge().returning('id');
+  const [econProgramme] = await knex('programmes').insert({ university_id: icu.id, department_id: econDepartment.id, name: 'BSc Economics', code: 'BSECON' })
+    .onConflict(['university_id', 'name']).merge().returning('id');
+  const [landProgramme] = await knex('programmes').insert({ university_id: aru.id, department_id: landDepartment.id, name: 'BSc Land Management and Valuation', code: 'BSLMV' })
+    .onConflict(['university_id', 'name']).merge().returning('id');
+
+  // Seed data has known institution provenance; the migration's existing
+  // production rows remain in the quarantined legacy tenant for manual review.
+  await knex('users').whereNot({ student_id: '32162/T.2023' }).update({ university_id: icu.id, campus_id: icuCampus.id });
+  await knex('users').where({ student_id: '32162/T.2023' }).update({ university_id: aru.id, campus_id: aruCampus.id, department_id: landDepartment.id, programme_id: landProgramme.id });
+  await knex('users').where({ university_id: icu.id, programme: 'BSc Computer Science' }).update({ department_id: csDepartment.id, programme_id: csProgramme.id });
+  await knex('users').where({ university_id: icu.id, programme: 'BSc Economics' }).update({ department_id: econDepartment.id, programme_id: econProgramme.id });
+  await knex('users').where({ university_id: icu.id }).update({ student_year: knex.ref('year') });
+  for (const table of ['courses', 'notices', 'chambers', 'clubs', 'events']) await knex(table).update({ university_id: icu.id });
+  // Demo career opportunities and recruiting projects are intentionally national;
+  // the migration keeps all legacy content university-only by default.
+  await knex('opportunities').update({ university_id: icu.id, visibility: 'national' });
+  await knex('chat_threads').update({ university_id: icu.id });
+  await knex('projects').update({ university_id: icu.id, visibility: 'national' });
+  const csStudents = await knex('users').where({ university_id: icu.id, role: 'student', department_id: csDepartment.id }).select('id', 'student_year');
+  const econStudents = await knex('users').where({ university_id: icu.id, role: 'student', department_id: econDepartment.id }).select('id', 'student_year');
+  for (const student of csStudents) {
+    for (const courseId of [csc101, csc203, mat104]) await knex('student_course_enrollments').insert({ university_id: icu.id, student_id: student.id, course_id: courseId, academic_year: '2026', term: 'Semester 2' }).onConflict().ignore();
+  }
+  for (const student of econStudents) {
+    await knex('student_course_enrollments').insert({ university_id: icu.id, student_id: student.id, course_id: acc201, academic_year: '2026', term: 'Semester 2' }).onConflict().ignore();
+  }
 
   console.log(`Seed complete. Demo login: student_id="ICU/2024/00458" password="${DEMO_PASSWORD}"`);
   console.log('Reviewer login: student_id="32162/T.2023" password="Mpambije"');

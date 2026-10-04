@@ -28,7 +28,9 @@ employerRouter.get('/opportunities', asyncHandler(async (req, res) => {
 employerRouter.post('/opportunities', asyncHandler(async (req, res) => {
   const { role, type, category } = req.body;
   if (!role || !type || !category) throw new HttpError(400, 'role, type and category are required');
-  res.status(201).json(await employerService.createOpportunity(req.user.id, req.body));
+  const opportunity = await employerService.createOpportunity(req.user.id, req.body);
+  if (!opportunity) throw new HttpError(403, 'A verified company profile is required to publish opportunities');
+  res.status(201).json(opportunity);
 }));
 
 employerRouter.get('/opportunities/:id/applicants', asyncHandler(async (req, res) => {
@@ -41,10 +43,12 @@ employerRouter.post('/competitions', asyncHandler(async (req, res) => {
   const { title } = req.body;
   if (!title) throw new HttpError(400, 'title is required');
   const row = await employerService.createChallenge(req.user.id, req.body);
-  if (!row) throw new HttpError(400, 'Create a company profile first');
+  if (!row) throw new HttpError(403, 'A verified company profile is required to publish competitions');
   res.status(201).json(row);
 }));
 
 employerRouter.get('/talent-search', asyncHandler(async (req, res) => {
+  const company = await employerService.getMyCompany(req.user.id);
+  if (!company?.verified) throw new HttpError(403, 'A verified company profile is required for talent search');
   res.json(await employerService.searchTalent({ skill: req.query.skill, programme: req.query.programme }));
 }));

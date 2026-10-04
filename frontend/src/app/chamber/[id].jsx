@@ -152,6 +152,17 @@ export default function ChamberScreen() {
           </Pressable>
         </View>
 
+        {id === 'music' && (
+          <Pressable style={styles.musicExplore} onPress={() => router.push('/music')}>
+            <View style={styles.musicExploreIcon}><Ionicons name="musical-notes" size={20} color="#fff" /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.musicExploreTitle}>Explore songs</Text>
+              <Text style={styles.musicExploreSubtitle}>Search tracks and play official previews</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={19} color={colors.textMuted} />
+          </Pressable>
+        )}
+
         {/* Tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
           {chamberTabs.map((tb) => {
@@ -399,6 +410,26 @@ const styles = themedStyles((colors) => ({
     marginTop: spacing.lg,
     gap: spacing.xl,
   },
+  musicExplore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+  },
+  musicExploreIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F2994A',
+  },
+  musicExploreTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  musicExploreSubtitle: { color: colors.textMuted, fontSize: 12, marginTop: 3 },
   statItem: {
     alignItems: 'center',
   },

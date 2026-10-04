@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { Text, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, radii, spacing, themedStyles } from '@/theme';
@@ -26,8 +26,7 @@ export default function CreateProjectScreen() {
         skills: skills.split(',').map((s) => s.trim()).filter(Boolean),
         neededCount: Number(neededCount) || 0,
       });
-      if (router.canGoBack()) router.back();
-      else router.replace('/career');
+      router.replace({ pathname: '/career', params: { tab: 'projects' } });
     } catch (e) {
       Alert.alert('Could not create project', e.message ?? 'Something went wrong');
     } finally {

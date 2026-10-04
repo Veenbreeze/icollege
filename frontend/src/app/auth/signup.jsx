@@ -10,25 +10,17 @@ import { Button } from '@/components/ui/Button';
 import { ClaySurface } from '@/components/ui/ClaySurface';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { ApiError } from '@/lib/api/client';
-
-const ROLES = [
-  { key: 'lecturer', label: 'Lecturer', icon: 'easel-outline' },
-  { key: 'university_admin', label: 'University Admin', icon: 'business-outline' },
-  { key: 'club_admin', label: 'Club / Org Admin', icon: 'people-outline' },
-  { key: 'employer', label: 'Employer', icon: 'briefcase-outline' },
-  { key: 'platform_admin', label: 'Platform Admin', icon: 'shield-checkmark-outline' },
-];
+import { UniversityPicker } from '@/components/auth/UniversityPicker';
 
 export default function SignupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signup } = useAuth();
-  const [role, setRole] = useState(ROLES[0].key);
+  const [universitySlug, setUniversitySlug] = useState('');
   const [fullName, setFullName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [pendingMessage, setPendingMessage] = useState(null);
@@ -41,7 +33,7 @@ export default function SignupScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      const result = await signup({ fullName, studentId: studentId.trim(), email, password, role, companyName: role === 'employer' ? companyName : undefined });
+      const result = await signup({ fullName, studentId: studentId.trim(), email, password, universitySlug });
       if (result.pending) {
         setPendingMessage(result.message);
       } else {
@@ -87,32 +79,21 @@ export default function SignupScreen() {
             <Ionicons name="person-add" size={26} color={colors.primary} />
           </ClaySurface>
           <Text style={styles.heroTitle}>Create your account</Text>
-          <Text style={styles.heroSubtitle}>Join as staff, club or partner</Text>
+          <Text style={styles.heroSubtitle}>Create a student account</Text>
         </LinearGradient>
 
         <View style={styles.sheetWrap}>
           <ClaySurface radius={radii.xxl} style={styles.sheet}>
-            <Text style={styles.label}>Role</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roleRow}>
-              {ROLES.map((r) => (
-                <Pressable key={r.key} onPress={() => setRole(r.key)} style={[styles.roleChip, role === r.key && styles.roleChipActive]}>
-                  <Ionicons name={r.icon} size={16} color={role === r.key ? colors.white : colors.textSecondary} />
-                  <Text style={[styles.roleLabel, role === r.key && styles.roleLabelActive]}>{r.label}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+            <UniversityPicker value={universitySlug} onChange={setUniversitySlug} />
 
             <View style={styles.noticeBox}>
               <Ionicons name="information-circle-outline" size={16} color={colors.orange} />
-              <Text style={styles.noticeText}>New accounts require admin approval before you can log in.</Text>
+              <Text style={styles.noticeText}>Use your iCollege account details. Your student identity and course links require verification by your institution.</Text>
             </View>
 
             <Field label="Full Name" icon="person-outline" placeholder="Jane Doe" value={fullName} onChangeText={setFullName} />
-            <Field label="Staff / Reference ID" icon="card-outline" placeholder="STAFF/00019" autoCapitalize="characters" value={studentId} onChangeText={setStudentId} />
-            <Field label="Email" icon="mail-outline" placeholder="you@icu.ac.tz" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
-            {role === 'employer' && (
-              <Field label="Company Name" icon="business-outline" placeholder="Acme Inc." value={companyName} onChangeText={setCompanyName} />
-            )}
+            <Field label="Student / Registration Number" icon="card-outline" placeholder="Your institution ID" autoCapitalize="characters" value={studentId} onChangeText={setStudentId} />
+            <Field label="Email" icon="mail-outline" placeholder="you@university.edu" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
             <Field label="Password" icon="lock-closed-outline" placeholder="At least 8 characters" password value={password} onChangeText={setPassword} />
 
             {error && (

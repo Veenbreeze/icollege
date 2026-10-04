@@ -14,7 +14,7 @@ const LEN = 6;
 export default function VerifyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { studentId, devCode } = useLocalSearchParams();
+  const { studentId, devCode, universitySlug } = useLocalSearchParams();
   const [code, setCode] = useState(Array(LEN).fill(''));
   const inputs = useRef([]);
   const [newPassword, setNewPassword] = useState('');
@@ -40,7 +40,7 @@ export default function VerifyScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await resetPassword(studentId, code.join(''), newPassword);
+      await resetPassword(studentId, code.join(''), newPassword, universitySlug);
       router.replace('/auth/login');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
@@ -51,7 +51,7 @@ export default function VerifyScreen() {
   const onResend = async () => {
     setResending(true);
     try {
-      await forgotPassword(studentId);
+      await forgotPassword(studentId, universitySlug);
     } finally {
       setResending(false);
     }

@@ -10,53 +10,55 @@ export const clubAdminRouter = Router();
 clubAdminRouter.use(requireAuth, requireRole('club_admin'));
 
 clubAdminRouter.get('/clubs', asyncHandler(async (req, res) => {
-  res.json(await clubAdminService.listMyClubs(req.user.id));
+  res.json(await clubAdminService.listMyClubs(req.user));
 }));
 
 clubAdminRouter.patch('/clubs/:id', asyncHandler(async (req, res) => {
-  const row = await clubAdminService.updateClubProfile(numericId(req.params.id), req.user.id, req.body);
+  const row = await clubAdminService.updateClubProfile(numericId(req.params.id), req.user, req.body);
   if (!row) throw new HttpError(403, 'You do not manage this club');
   res.json(row);
 }));
 
 clubAdminRouter.get('/clubs/:id/members', asyncHandler(async (req, res) => {
-  const members = await clubAdminService.listMembers(numericId(req.params.id), req.user.id);
+  const members = await clubAdminService.listMembers(numericId(req.params.id), req.user);
   if (!members) throw new HttpError(403, 'You do not manage this club');
   res.json(members);
 }));
 
 clubAdminRouter.delete('/clubs/:id/members/:userId', asyncHandler(async (req, res) => {
-  const ok = await clubAdminService.removeMember(numericId(req.params.id), req.user.id, numericId(req.params.userId));
+  const ok = await clubAdminService.removeMember(numericId(req.params.id), req.user, numericId(req.params.userId));
   if (!ok) throw new HttpError(404, 'Member not found');
   res.status(204).end();
 }));
 
 clubAdminRouter.post('/clubs/:id/events', asyncHandler(async (req, res) => {
-  const row = await clubAdminService.createEvent(numericId(req.params.id), req.user.id, req.body);
+  const row = await clubAdminService.createEvent(numericId(req.params.id), req.user, req.body);
   if (!row) throw new HttpError(403, 'You do not manage this club');
   res.status(201).json(row);
 }));
 
 clubAdminRouter.patch('/clubs/:id/events/:eventId', asyncHandler(async (req, res) => {
-  const row = await clubAdminService.updateEvent(numericId(req.params.id), req.user.id, numericId(req.params.eventId), req.body);
+  const row = await clubAdminService.updateEvent(numericId(req.params.id), req.user, numericId(req.params.eventId), req.body);
   if (!row) throw new HttpError(404, 'Event not found');
   res.json(row);
 }));
 
 clubAdminRouter.delete('/clubs/:id/events/:eventId', asyncHandler(async (req, res) => {
-  const ok = await clubAdminService.deleteEvent(numericId(req.params.id), req.user.id, numericId(req.params.eventId));
+  const ok = await clubAdminService.deleteEvent(numericId(req.params.id), req.user, numericId(req.params.eventId));
   if (!ok) throw new HttpError(404, 'Event not found');
   res.status(204).end();
 }));
 
 clubAdminRouter.get('/clubs/:id/announcements', asyncHandler(async (req, res) => {
-  res.json(await clubAdminService.listAnnouncements(numericId(req.params.id)));
+  const announcements = await clubAdminService.listAnnouncements(numericId(req.params.id), req.user);
+  if (!announcements) throw new HttpError(403, 'You do not manage this club');
+  res.json(announcements);
 }));
 
 clubAdminRouter.post('/clubs/:id/announcements', asyncHandler(async (req, res) => {
   const { title, body } = req.body;
   if (!title) throw new HttpError(400, 'title is required');
-  const row = await clubAdminService.createAnnouncement(numericId(req.params.id), req.user.id, { title, body });
+  const row = await clubAdminService.createAnnouncement(numericId(req.params.id), req.user, { title, body });
   if (!row) throw new HttpError(403, 'You do not manage this club');
   res.status(201).json(row);
 }));
@@ -64,7 +66,7 @@ clubAdminRouter.post('/clubs/:id/announcements', asyncHandler(async (req, res) =
 clubAdminRouter.post('/clubs/:id/competitions', asyncHandler(async (req, res) => {
   const { title } = req.body;
   if (!title) throw new HttpError(400, 'title is required');
-  const row = await clubAdminService.createCompetition(numericId(req.params.id), req.user.id, req.body);
+  const row = await clubAdminService.createCompetition(numericId(req.params.id), req.user, req.body);
   if (!row) throw new HttpError(403, 'You do not manage this club');
   res.status(201).json(row);
 }));

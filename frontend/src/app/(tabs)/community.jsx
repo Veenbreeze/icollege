@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +9,12 @@ import { useApi } from '@/hooks/useApi';
 import { fetchChambers } from '@/lib/api/community';
 export default function CommunityScreen() {
   const router = useRouter();
+  const [search, setSearch] = useState('');
   const { data: chambers, isLoading } = useApi(fetchChambers);
+  const visibleChambers = (chambers ?? []).filter((chamber) => {
+    const query = search.trim().toLowerCase();
+    return !query || `${chamber.name} ${chamber.tagline ?? ''} ${chamber.description ?? ''}`.toLowerCase().includes(query);
+  });
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -28,6 +34,10 @@ export default function CommunityScreen() {
             placeholder="Search chambers, people, topics..."
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            onSubmitEditing={() => search.trim() && router.push({ pathname: '/ai-search', params: { q: search.trim() } })}
           />
         </View>
 
@@ -47,6 +57,15 @@ export default function CommunityScreen() {
           <Ionicons name="chevron-forward" size={20} color={colors.white} />
         </Pressable>
 
+        <Pressable style={styles.musicBanner} onPress={() => router.push('/music')}>
+          <View style={styles.musicIcon}><Ionicons name="musical-notes" size={20} color={colors.white} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.musicTitle}>Explore music</Text>
+            <Text style={styles.musicSub}>Search songs and play official previews</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={19} color={colors.textMuted} />
+        </Pressable>
+
         <Text style={styles.sectionTitle}>Chambers</Text>
         {isLoading && (
           <ActivityIndicator
@@ -56,67 +75,36 @@ export default function CommunityScreen() {
             }}
           />
         )}
-        {(chambers ?? []).map((c) => {
-          const t = chamberThemes[c.theme] ?? chamberThemes.economics;
-          return (
-            <Pressable key={c.id} onPress={() => router.push(`/chamber/${c.id}`)}>
-              <Card style={styles.row}>
-                <View
-                  style={[
-                    styles.icon,
-                    {
-                      backgroundColor: t.color,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      fontSize: 26,
-                    }}
-                  >
-                    {c.emoji}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flex: 1,
-                  }}
-                >
+        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chamberShelf}>
+          {visibleChambers.map((c) => {
+            const t = chamberThemes[c.theme] ?? chamberThemes.economics;
+            return (
+              <Pressable key={c.id} style={styles.chamberItem} onPress={() => router.push(`/chamber/${c.id}`)}>
+                <Card style={styles.row}>
+                  <View style={[styles.icon, { backgroundColor: t.color }]}>
+                    <Text style={{ fontSize: 26 }}>{c.emoji}</Text>
+                  </View>
                   <View style={styles.nameRow}>
-                    <Text style={styles.name}>{c.name} Chamber</Text>
-                    {c.joined && (
-                      <View
-                        style={[
-                          styles.joinedPill,
-                          {
-                            backgroundColor: t.soft,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.joinedText,
-                            {
-                              color: t.color,
-                            },
-                          ]}
-                        >
-                          Joined
-                        </Text>
+                    <Text style={styles.name} numberOfLines={1}>{c.name}</Text>
+                    {(c.joined || c.recommended) && (
+                      <View style={[styles.joinedPill, { backgroundColor: t.soft }]}>
+                        <Text style={[styles.joinedText, { color: t.color }]}>{c.joined ? 'Joined' : 'Recommended'}</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={styles.tagline}>{c.tagline}</Text>
+                  <Text style={styles.tagline} numberOfLines={2}>{c.tagline}</Text>
                   <View style={styles.metaRow}>
+                    <View accessibilityLabel={`${c.visibility || 'university'} visibility`} style={styles.scopeBadge}>
+                      <Text style={styles.scopeText}>{c.visibility === 'national' ? 'National' : c.visibility === 'department' ? 'Department' : c.visibility === 'course' ? 'Course' : 'University'}</Text>
+                    </View>
                     <Ionicons name="people-outline" size={13} color={colors.textMuted} />
                     <Text style={styles.meta}>{c.memberCount} Members</Text>
                   </View>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-              </Card>
-            </Pressable>
-          );
-        })}
+                </Card>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </ScrollView>
     </SafeAreaView>
   );
@@ -168,6 +156,19 @@ const styles = themedStyles((colors) => ({
     borderRadius: radii.xl,
     ...shadow.card,
   },
+  musicBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+  },
+  musicIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2994A' },
+  musicTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  musicSub: { fontSize: 12, color: colors.textMuted, marginTop: 3 },
   clubsIcon: {
     width: 44,
     height: 44,
@@ -195,11 +196,18 @@ const styles = themedStyles((colors) => ({
     marginBottom: spacing.sm,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    minHeight: 180,
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  chamberShelf: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
     gap: spacing.md,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
+  },
+  chamberItem: {
+    width: 230,
   },
   icon: {
     width: 54,
@@ -238,6 +246,13 @@ const styles = themedStyles((colors) => ({
     gap: 4,
     marginTop: 4,
   },
+  scopeBadge: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  scopeText: { color: colors.primary, fontSize: 10, fontWeight: '700' },
   meta: {
     fontSize: 12,
     color: colors.textMuted,

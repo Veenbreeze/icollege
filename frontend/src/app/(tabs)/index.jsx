@@ -104,7 +104,9 @@ export default function HomeScreen() {
             <Text style={styles.greetTitle}>
               {greetingForNow()}, {user.fullName.split(' ')[0]}
             </Text>
-            <Text style={styles.greetSub}>You have a productive day ahead!</Text>
+            <Text style={styles.greetSub}>
+              {[user.universityName, user.campusName, user.programmeName || user.programme, user.studentYear || user.year].filter(Boolean).join(' · ') || 'You have a productive day ahead!'}
+            </Text>
           </View>
           <Pressable style={styles.scorePill} onPress={() => router.push('/portfolio')}>
             <Ionicons name="star" size={16} color={colors.yellow} />
@@ -286,7 +288,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <SectionHeader title="Explore Chambers" action="See All" onAction={() => router.push('/community')} />
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chamberScroll}>
+        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chamberScroll}>
           {(chambers ?? []).map((c) => (
             <Pressable key={c.id} style={[styles.chamberCard, { width: chamberCardWidth }]} onPress={() => router.push(`/chamber/${c.id}`)}>
               <View style={[styles.chamberThumb, { width: chamberCardWidth, height: Math.round(chamberCardWidth * 0.85) }]}>
@@ -310,7 +312,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <SectionHeader title="Recommended for You" action="View All" />
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chamberScroll}>
+        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chamberScroll}>
           {recommended.map((r) => (
             <Pressable
               key={r.key}

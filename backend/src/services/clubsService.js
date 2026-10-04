@@ -1,11 +1,11 @@
 import { db } from '../db/pool.js';
 import { countByColumn, pluckSet, toggleRow } from '../db/queryHelpers.js';
 
-export async function listClubs(userId) {
-  const clubs = await db('clubs').select('*').orderBy('name');
+export async function listClubs(user) {
+  const clubs = await db('clubs').where('university_id', user.universityId).select('*').orderBy('name').limit(200);
   const [memberSet, countMap] = await Promise.all([
-    pluckSet('club_members', { user_id: userId }, 'club_id'),
-    countByColumn('club_members', 'club_id'),
+    pluckSet('club_members', { user_id: user.id }, 'club_id'),
+    countByColumn('club_members', 'club_id', clubs.map((c) => c.id)),
   ]);
 
   return clubs.map((c) => ({
@@ -19,16 +19,18 @@ export async function listClubs(userId) {
   }));
 }
 
-export async function toggleClubMembership(clubId, userId) {
-  const joined = await toggleRow('club_members', { club_id: clubId, user_id: userId });
+export async function toggleClubMembership(clubId, user) {
+  if (!(await db('clubs').where({ id: clubId, university_id: user.universityId }).first('id'))) return null;
+  const joined = await toggleRow('club_members', { club_id: clubId, user_id: user.id });
   return { joined };
 }
 
-export async function listEvents(userId) {
-  const events = await db('events').leftJoin('clubs', 'clubs.id', 'events.club_id').select('events.*', 'clubs.name as club_name').orderBy('events.event_date');
+export async function listEvents(user) {
+  const events = await db('events').leftJoin('clubs', 'clubs.id', 'events.club_id').where('events.university_id', user.universityId)
+    .andWhere('events.event_date', '>=', db.raw('CURRENT_DATE')).select('events.*', 'clubs.name as club_name').orderBy('events.event_date').limit(200);
   const [regSet, countMap] = await Promise.all([
-    pluckSet('event_registrations', { user_id: userId }, 'event_id'),
-    countByColumn('event_registrations', 'event_id'),
+    pluckSet('event_registrations', { user_id: user.id }, 'event_id'),
+    countByColumn('event_registrations', 'event_id', events.map((e) => e.id)),
   ]);
 
   return events.map((e) => {
@@ -51,17 +53,21 @@ export async function listEvents(userId) {
   });
 }
 
-export async function toggleEventRegistration(eventId, userId) {
-  const registered = await toggleRow('event_registrations', { event_id: eventId, user_id: userId });
+export async function toggleEventRegistration(eventId, user) {
+  if (!(await db('events').where({ id: eventId, university_id: user.universityId }).first('id'))) return null;
+  const registered = await toggleRow('event_registrations', { event_id: eventId, user_id: user.id });
   return { registered };
 }
 
-export async function createEvent(userId, { title, type, eventDate, eventTime, venue, emoji, colorKey, clubId }) {
-  const user = await db('users').where({ id: userId }).first();
+export async function createEvent(user, { title, type, eventDate, eventTime, venue, emoji, colorKey, clubId }) {
+  if (clubId && !(await db('clubs').where({ id: clubId, university_id: user.universityId }).first('id'))) return null;
+  const account = await db('users').where({ id: user.id, university_id: user.universityId }).first();
+  if (!account) return null;
   const [row] = await db('events').insert({
+    university_id: user.universityId,
     club_id: clubId || null,
     title,
-    host_name: user.full_name,
+    host_name: account.full_name,
     type,
     event_date: eventDate,
     event_time: eventTime,
@@ -69,7 +75,7 @@ export async function createEvent(userId, { title, type, eventDate, eventTime, v
     emoji: emoji || '📅',
     color_key: colorKey || 'blue',
   }).returning('*');
-  await db('event_registrations').insert({ event_id: row.id, user_id: userId }).onConflict(['event_id', 'user_id']).ignore();
+  await db('event_registrations').insert({ event_id: row.id, user_id: user.id }).onConflict(['event_id', 'user_id']).ignore();
 
   const date = new Date(row.event_date);
   return {

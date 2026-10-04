@@ -13,13 +13,13 @@ lecturerRouter.use(requireAuth, requireRole('lecturer'));
 const upload = createUploader('materials');
 
 lecturerRouter.get('/courses', asyncHandler(async (req, res) => {
-  res.json(await lecturerService.listMyCourses(req.user.id));
+  res.json(await lecturerService.listMyCourses(req.user));
 }));
 
 lecturerRouter.post('/notices', asyncHandler(async (req, res) => {
   const { title, body, courseId } = req.body;
   if (!title || !body) throw new HttpError(400, 'title and body are required');
-  const notice = await lecturerService.createNotice(req.user.id, { title, body, courseId: courseId ? numericId(courseId) : null });
+  const notice = await lecturerService.createNotice(req.user, { title, body, courseId: courseId ? numericId(courseId) : null });
   if (!notice) throw new HttpError(400, 'Invalid course');
   res.status(201).json(notice);
 }));
@@ -28,7 +28,7 @@ lecturerRouter.post('/materials', upload.single('file'), asyncHandler(async (req
   if (!req.file) throw new HttpError(400, 'No file uploaded');
   const { courseId } = req.body;
   if (!courseId) throw new HttpError(400, 'courseId is required');
-  const material = await lecturerService.uploadMaterial(req.user.id, numericId(courseId), req.file);
+  const material = await lecturerService.uploadMaterial(req.user, numericId(courseId), req.file);
   if (!material) throw new HttpError(403, 'You do not teach this course');
   res.status(201).json(material);
 }));
@@ -36,19 +36,19 @@ lecturerRouter.post('/materials', upload.single('file'), asyncHandler(async (req
 lecturerRouter.post('/lecture-updates', asyncHandler(async (req, res) => {
   const { timetableSlotId, date, status, note } = req.body;
   if (!timetableSlotId || !date || !status) throw new HttpError(400, 'timetableSlotId, date and status are required');
-  const row = await lecturerService.createLectureUpdate(req.user.id, { timetableSlotId: numericId(timetableSlotId), date, status, note });
+  const row = await lecturerService.createLectureUpdate(req.user, { timetableSlotId: numericId(timetableSlotId), date, status, note });
   if (!row) throw new HttpError(403, 'You do not teach this course');
   res.status(201).json(row);
 }));
 
 lecturerRouter.get('/timetable-change-requests', asyncHandler(async (req, res) => {
-  res.json(await lecturerService.listMyTimetableChangeRequests(req.user.id));
+  res.json(await lecturerService.listMyTimetableChangeRequests(req.user));
 }));
 
 lecturerRouter.post('/timetable-change-requests', asyncHandler(async (req, res) => {
   const { courseId, message } = req.body;
   if (!courseId || !message) throw new HttpError(400, 'courseId and message are required');
-  const row = await lecturerService.createTimetableChangeRequest(req.user.id, { courseId: numericId(courseId), message });
+  const row = await lecturerService.createTimetableChangeRequest(req.user, { courseId: numericId(courseId), message });
   if (!row) throw new HttpError(403, 'You do not teach this course');
   res.status(201).json(row);
 }));

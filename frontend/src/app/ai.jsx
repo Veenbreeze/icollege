@@ -16,6 +16,8 @@ import { colors, radii, spacing, shadow, themedStyles } from '@/theme';
 import { chatReply } from '@/lib/api/ai';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { aiCapabilities, aiSuggestions } from '@/data/mock';
+let nextMessageId = 0;
+const createMessageId = () => String(++nextMessageId);
 export default function AiScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -27,7 +29,7 @@ export default function AiScreen() {
     const t = text.trim();
     if (!t) return;
     const userMsg = {
-      id: String(Date.now()),
+      id: createMessageId(),
       text: t,
       mine: true,
     };
@@ -39,7 +41,7 @@ export default function AiScreen() {
       setMessages((m) => [
         ...m,
         {
-          id: String(Date.now() + 1),
+          id: createMessageId(),
           text: reply,
           mine: false,
         },

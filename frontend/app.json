@@ -4,23 +4,24 @@
     "slug": "iCollege",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icollege-icon.png",
     "scheme": "icollege",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icollege-icon.png",
       "supportsTablet": true
     },
     "android": {
+      "package": "tz.ac.icollege.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F6FAFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
@@ -29,16 +30,26 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#F6FAFF",
+          "image": "./assets/images/icollege-splash.png",
+          "imageWidth": 220
         }
       ],
       "expo-secure-store",
-      "expo-video"
+      "expo-video",
+      "expo-asset",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "77c18194-350e-4f24-b02a-56b6b9a3a973"
+      }
+    },
+    "owner": "victorhq12"
   }
 }

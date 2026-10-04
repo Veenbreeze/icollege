@@ -8,12 +8,14 @@ import {
 } from '@/lib/api/notifications';
 
 const POLL_INTERVAL_MS = 15000;
+const EMPTY_NOTIFICATIONS = [];
 
 const NotificationsContext = createContext(null);
 
 export function NotificationsProvider({ children }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
+  const [notificationsUserId, setNotificationsUserId] = useState(null);
   const [toast, setToast] = useState(null);
   const lastSeenIdRef = useRef(null);
   const toastTimerRef = useRef(null);
@@ -27,6 +29,7 @@ export function NotificationsProvider({ children }) {
       return;
     }
     setNotifications(list);
+    setNotificationsUserId(user.id);
 
     if (list.length === 0) return;
     const newestId = list[0].id;
@@ -42,11 +45,11 @@ export function NotificationsProvider({ children }) {
 
   useEffect(() => {
     if (!user) {
-      setNotifications([]);
       lastSeenIdRef.current = null;
       return;
     }
-    load(true);
+    const timer = setTimeout(() => load(true), 0);
+    return () => clearTimeout(timer);
   }, [user, load]);
 
   usePolling(() => load(false), POLL_INTERVAL_MS, !!user);
@@ -69,11 +72,12 @@ export function NotificationsProvider({ children }) {
     }
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const visibleNotifications = user && notificationsUserId === user.id ? notifications : EMPTY_NOTIFICATIONS;
+  const unreadCount = visibleNotifications.filter((n) => !n.read).length;
 
   const value = useMemo(
-    () => ({ notifications, unreadCount, toast, dismissToast: () => setToast(null), refetch: () => load(false), markRead, markAllRead }),
-    [notifications, unreadCount, toast, load, markRead, markAllRead],
+    () => ({ notifications: visibleNotifications, unreadCount, toast, dismissToast: () => setToast(null), refetch: () => load(false), markRead, markAllRead }),
+    [visibleNotifications, unreadCount, toast, load, markRead, markAllRead],
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

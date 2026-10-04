@@ -36,47 +36,55 @@ function toPublicOpportunity(row, skillSet, savedSet, appliedSet) {
   };
 }
 
-export async function listOpportunities(userId, category) {
+export async function listOpportunities(user, category) {
   const [skillSet, savedSet, appliedSet] = await Promise.all([
-    userSkillSet(userId),
-    pluckSet('opportunity_saves', { user_id: userId }, 'opportunity_id'),
-    pluckSet('opportunity_applications', { user_id: userId }, 'opportunity_id'),
+    userSkillSet(user.id),
+    pluckSet('opportunity_saves', { user_id: user.id }, 'opportunity_id'),
+    pluckSet('opportunity_applications', { user_id: user.id }, 'opportunity_id'),
   ]);
-  let query = db('opportunities').select('*');
+  let query = db('opportunities').where(function () {
+    this.where('visibility', 'national').orWhere({ visibility: 'university', university_id: user.universityId });
+  }).select('*');
   if (category && category !== 'All') query = query.where({ category });
-  const rows = await query.orderBy('posted_at', 'desc');
+  const rows = await query.orderBy('posted_at', 'desc').limit(100);
   return rows.map((r) => toPublicOpportunity(r, skillSet, savedSet, appliedSet)).sort((a, b) => b.matched - a.matched);
 }
 
-export async function getOpportunity(id, userId) {
-  const row = await db('opportunities').where({ id }).first();
+export async function getOpportunity(id, user) {
+  const row = await db('opportunities').where({ id }).andWhere(function () {
+    this.where('visibility', 'national').orWhere({ visibility: 'university', university_id: user.universityId });
+  }).first();
   if (!row) return null;
   const [skillSet, savedSet, appliedSet] = await Promise.all([
-    userSkillSet(userId),
-    pluckSet('opportunity_saves', { user_id: userId }, 'opportunity_id'),
-    pluckSet('opportunity_applications', { user_id: userId }, 'opportunity_id'),
+    userSkillSet(user.id),
+    pluckSet('opportunity_saves', { user_id: user.id }, 'opportunity_id'),
+    pluckSet('opportunity_applications', { user_id: user.id }, 'opportunity_id'),
   ]);
   return toPublicOpportunity(row, skillSet, savedSet, appliedSet);
 }
 
-export async function toggleSaveOpportunity(opportunityId, userId) {
-  const saved = await toggleRow('opportunity_saves', { opportunity_id: opportunityId, user_id: userId });
+export async function toggleSaveOpportunity(opportunityId, user) {
+  if (!(await getOpportunity(opportunityId, user))) return null;
+  const saved = await toggleRow('opportunity_saves', { opportunity_id: opportunityId, user_id: user.id });
   return { saved };
 }
 
-export async function applyToOpportunity(opportunityId, userId) {
+export async function applyToOpportunity(opportunityId, user) {
+  if (!(await getOpportunity(opportunityId, user))) return null;
   await db('opportunity_applications')
-    .insert({ opportunity_id: opportunityId, user_id: userId })
+    .insert({ opportunity_id: opportunityId, user_id: user.id })
     .onConflict(['user_id', 'opportunity_id'])
     .ignore();
   return { applied: true };
 }
 
-export async function listProjects(userId) {
-  const rows = await db('projects').join('users', 'users.id', 'projects.owner_id').select('projects.*', 'users.full_name as owner_name');
+export async function listProjects(user) {
+  const rows = await db('projects').join('users', 'users.id', 'projects.owner_id')
+    .where(function () { this.where('projects.visibility', 'national').orWhere({ 'projects.visibility': 'university', 'projects.university_id': user.universityId }); })
+    .select('projects.*', 'users.full_name as owner_name').orderBy('projects.created_at', 'desc').limit(100);
   const [memberSet, countMap] = await Promise.all([
-    pluckSet('project_members', { user_id: userId }, 'project_id'),
-    countByColumn('project_members', 'project_id'),
+    pluckSet('project_members', { user_id: user.id }, 'project_id'),
+    countByColumn('project_members', 'project_id', rows.map((r) => r.id)),
   ]);
 
   return rows.map((r) => ({
@@ -94,15 +102,21 @@ export async function listProjects(userId) {
   }));
 }
 
-export async function toggleProjectMembership(projectId, userId) {
-  const joined = await toggleRow('project_members', { project_id: projectId, user_id: userId }, { role: 'member' });
+export async function toggleProjectMembership(projectId, user) {
+  const project = await db('projects').where({ id: projectId }).andWhere(function () {
+    this.where('visibility', 'national').orWhere({ visibility: 'university', university_id: user.universityId });
+  }).first('id');
+  if (!project) return null;
+  const joined = await toggleRow('project_members', { project_id: projectId, user_id: user.id }, { role: 'member' });
   return { joined };
 }
 
-export async function createProject(ownerId, { title, tagline, skills, neededCount, emoji, colorKey }) {
+export async function createProject(user, { title, tagline, skills, neededCount, emoji, colorKey }) {
+  const ownerId = user.id;
   const [row] = await db.transaction(async (trx) => {
     const inserted = await trx('projects').insert({
       owner_id: ownerId,
+      university_id: user.universityId,
       title,
       tagline,
       skills: skills ?? [],

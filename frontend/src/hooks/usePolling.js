@@ -4,7 +4,9 @@ import { useEffect, useRef } from 'react';
  * since this app uses REST + polling rather than WebSockets. */
 export function usePolling(callback, intervalMs, enabled = true) {
   const savedCallback = useRef(callback);
-  savedCallback.current = callback;
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
   useEffect(() => {
     if (!enabled) return;
     const id = setInterval(() => savedCallback.current(), intervalMs);

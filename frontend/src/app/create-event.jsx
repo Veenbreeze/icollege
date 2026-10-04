@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, spacing, themedStyles } from '@/theme';
@@ -29,8 +29,7 @@ export default function CreateEventScreen() {
         eventTime: eventTime.trim(),
         venue: venue.trim(),
       });
-      if (router.canGoBack()) router.back();
-      else router.replace('/clubs');
+      router.replace('/clubs');
     } catch (e) {
       Alert.alert('Could not create event', e.message ?? 'Something went wrong');
     } finally {

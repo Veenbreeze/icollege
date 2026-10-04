@@ -2,11 +2,11 @@ import { Pressable, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, spacing, themedStyles } from '@/theme';
 import { ClaySurface } from './ClaySurface';
-export function Button({ label, onPress, variant = 'primary', icon, color = colors.primary, style }) {
+export function Button({ label, onPress, variant = 'primary', icon, color = colors.primary, style, disabled = false }) {
   const isPrimary = variant === 'primary';
   const isOutline = variant === 'outline';
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} disabled={disabled} accessibilityState={{ disabled }}>
       {({ pressed }) => (
         <ClaySurface
           radius={radii.md}
@@ -27,6 +27,7 @@ export function Button({ label, onPress, variant = 'primary', icon, color = colo
             pressed && {
               opacity: 0.92,
             },
+            disabled && { opacity: 0.5 },
             style,
           ]}
         >

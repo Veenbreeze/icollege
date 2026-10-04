@@ -24,7 +24,13 @@ export async function updateMyCompany(userId, data) {
 
 export async function createOpportunity(userId, data) {
   const company = await myCompany(userId);
+  if (!company?.verified) return null;
+  const employer = await db('users').where({ id: userId }).first('university_id');
+  const visibility = data.visibility || 'university';
+  if (!['university', 'national'].includes(visibility)) return null;
   const [row] = await db('opportunities').insert({
+    university_id: employer.university_id,
+    visibility,
     role: data.role,
     company: company?.name ?? data.company,
     logo_emoji: data.logoEmoji,
@@ -50,6 +56,8 @@ export async function listMyOpportunities(userId) {
 }
 
 export async function listApplicants(userId, opportunityId) {
+  const company = await myCompany(userId);
+  if (!company?.verified) return null;
   const opportunity = await db('opportunities').where({ id: opportunityId, posted_by: userId }).first();
   if (!opportunity) return null;
   return db('opportunity_applications')
@@ -61,7 +69,7 @@ export async function listApplicants(userId, opportunityId) {
 
 export async function createChallenge(userId, data) {
   const company = await myCompany(userId);
-  if (!company) return null;
+  if (!company?.verified) return null;
   const [row] = await db('competitions').insert({
     host_type: 'employer', host_id: company.id, title: data.title, description: data.description,
     start_date: data.startDate, end_date: data.endDate, created_by: userId,
@@ -86,5 +94,5 @@ export async function searchTalent({ skill, programme } = {}) {
     rows = rows.filter((r) => matchSet.has(r.id));
   }
 
-  return rows;
+  return rows.slice(0, 100);
 }

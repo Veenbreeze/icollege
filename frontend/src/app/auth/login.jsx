@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
-import { colors, radii, spacing, themedStyles } from '@/theme';
-import { Field } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { ClaySurface } from '@/components/ui/ClaySurface';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { Field } from '@/components/ui/Field';
 import { ApiError } from '@/lib/api/client';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { colors, radii, spacing, themedStyles } from '@/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -75,7 +75,7 @@ export default function LoginScreen() {
         <View style={styles.sheetWrap}>
           <ClaySurface radius={radii.xxl} style={styles.sheet}>
             <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Sign in with your university credentials</Text>
+            <Text style={styles.subtitle}>Sign in to your iCollege account, use your university credidentials.</Text>
 
             <View
               style={{
@@ -144,7 +144,7 @@ export default function LoginScreen() {
           </Pressable>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Having trouble signing in? Contact your registrar's office.</Text>
+            <Text style={styles.footerText}>Having trouble signing in? Contact your registrar&apos;s office.</Text>
           </View>
         </View>
       </ScrollView>

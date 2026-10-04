@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radii, spacing, themedStyles } from '@/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -51,7 +51,7 @@ export default function ClubAdminConsoleScreen() {
       <ScreenHeader title="Club Console" subtitle={club?.name ?? 'Manage your club'} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {isLoading ? <ActivityIndicator color={colors.primary} /> : !club ? (
-          <Text style={styles.empty}>You don't manage any club yet. Ask an admin to assign you as club owner.</Text>
+          <Text style={styles.empty}>You don&apos;t manage any club yet. Ask an admin to assign you as club owner.</Text>
         ) : (
           <>
             <Card style={styles.card}>

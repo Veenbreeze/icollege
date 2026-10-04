@@ -23,17 +23,20 @@ export default function ChatScreen() {
   const router = useRouter();
   const { data: thread } = useApi(() => fetchThread(id), [id]);
   const [messages, setMessages] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loadedId, setLoadedId] = useState(null);
   const [draft, setDraft] = useState('');
   const scrollRef = useRef(null);
   useEffect(() => {
-    setMessages([]);
-    setLoaded(false);
+    let cancelled = false;
     fetchMessages(id).then((msgs) => {
-      setMessages(msgs);
-      setLoaded(true);
+      if (!cancelled) {
+        setMessages(msgs);
+        setLoadedId(id);
+      }
     });
+    return () => { cancelled = true; };
   }, [id]);
+  const loaded = loadedId === id;
   const pollForNew = () => {
     const lastId = messages[messages.length - 1]?.id;
     fetchMessages(id, lastId).then((fresh) => {

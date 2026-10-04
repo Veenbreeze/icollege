@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, spacing, themedStyles } from '@/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
@@ -10,7 +9,7 @@ import { useApi } from '@/hooks/useApi';
 import { fetchMyCourses, postNotice, postLectureUpdate, requestTimetableChange } from '@/lib/api/lecturer';
 
 export default function LecturerConsoleScreen() {
-  const { data: courses, isLoading, refetch } = useApi(fetchMyCourses);
+  const { data: courses, isLoading } = useApi(fetchMyCourses);
   const [activeCourseId, setActiveCourseId] = useState(null);
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeBody, setNoticeBody] = useState('');

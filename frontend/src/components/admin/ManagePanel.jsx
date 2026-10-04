@@ -168,7 +168,7 @@ export function ManagePanel() {
 
         {sub === 'exam' && (
           <>
-            <CoursePicker />
+            {CoursePicker()}
             <Text style={styles.label}>Type</Text>
             <ChipRow options={EXAM_TYPES} value={f.examType} onChange={(v) => set('examType', v)} />
             <Field label="Date (YYYY-MM-DD)" placeholder="2026-05-19" value={f.examDate} onChangeText={(v) => set('examDate', v)} />
@@ -182,7 +182,7 @@ export function ManagePanel() {
 
         {sub === 'timetable' && (
           <>
-            <CoursePicker />
+            {CoursePicker()}
             <Text style={styles.label}>Day</Text>
             <ChipRow options={DAYS} value={f.dayOfWeek} getValue={(_, i) => i} onChange={(v) => set('dayOfWeek', v)} />
             <Field label="Start time" placeholder="08:00" value={f.startTime} onChangeText={(v) => set('startTime', v)} />

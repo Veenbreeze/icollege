@@ -27,8 +27,8 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isLoading,
-      login: async (studentId, password) => {
-        const session = await authApi.login(studentId, password);
+      login: async (studentId, password, universitySlug) => {
+        const session = await authApi.login(studentId, password, universitySlug);
         await saveSession({
           accessToken: session.accessToken,
           refreshToken: session.refreshToken,

@@ -3,25 +3,46 @@ import { View, Text, ScrollView, Pressable, Image, TextInput, ActivityIndicator,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, radii, spacing, shadow, themedStyles } from '@/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Field } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { useApi } from '@/hooks/useApi';
-import { fetchChambers, createPost } from '@/lib/api/community';
+import { fetchChambers, createPost, joinChamber } from '@/lib/api/community';
 import { appendFilePart } from '@/lib/media';
 
 export default function CreatePostScreen() {
   const router = useRouter();
-  const { data: chambers } = useApi(fetchChambers);
+  const { tag: requestedTag } = useLocalSearchParams();
+  const isDiscussion = requestedTag === 'question';
+  const { data: chambers, isLoading: loadingChambers, error: chambersError, refetch } = useApi(fetchChambers);
   const [chamberSlug, setChamberSlug] = useState(null);
+  const [joinedSlug, setJoinedSlug] = useState(null);
+  const [joining, setJoining] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [image, setImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const activeSlug = chamberSlug ?? chambers?.[0]?.id ?? null;
+  const activeSlug = chamberSlug ?? chambers?.find((chamber) => chamber.joined)?.id ?? null;
+  const activeChamber = chambers?.find((chamber) => chamber.id === activeSlug);
+  const activeChamberJoined = Boolean(activeChamber?.joined || joinedSlug === activeSlug);
+
+  async function joinSelectedChamber() {
+    if (!activeSlug || joining) return;
+    setJoining(true);
+    try {
+      const result = await joinChamber(activeSlug);
+      if (!result.joined) throw new Error('Could not join this chamber. Please try again.');
+      setJoinedSlug(activeSlug);
+      refetch();
+    } catch (e) {
+      Alert.alert('Could not join chamber', e.message ?? 'Please try again.');
+    } finally {
+      setJoining(false);
+    }
+  }
 
   async function pickImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -31,18 +52,18 @@ export default function CreatePostScreen() {
   }
 
   async function submit() {
-    if (!activeSlug) return Alert.alert('Pick a chamber', 'Choose which chamber to post in.');
+    if (!activeSlug) return Alert.alert('Choose a chamber', 'Select a chamber to share your post.');
+    if (!activeChamberJoined) return Alert.alert('Join this chamber', 'Join the selected chamber before posting.');
     if (!title.trim()) return Alert.alert('Title required', 'Give your post a title.');
     setSubmitting(true);
     try {
       const form = new FormData();
       form.append('title', title.trim());
       form.append('body', body.trim());
+      if (isDiscussion) form.append('tag', 'question');
       if (image) await appendFilePart(form, 'image', image, { fallbackName: 'photo.jpg', fallbackType: 'image/jpeg' });
       await createPost(activeSlug, form);
-      // Go back if we came from somewhere; otherwise land on the chamber so the new post is visible.
-      if (router.canGoBack()) router.back();
-      else router.replace(`/chamber/${activeSlug}`);
+      router.replace(`/chamber/${activeSlug}`);
     } catch (e) {
       Alert.alert('Could not post', e.message ?? 'Something went wrong');
     } finally {
@@ -52,9 +73,14 @@ export default function CreatePostScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="New Post" />
+      <ScreenHeader title={isDiscussion ? 'New Discussion' : 'New Post'} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.label}>Chamber</Text>
+        <Text style={styles.label}>Choose a chamber</Text>
+        {loadingChambers && <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} />}
+        {chambersError && <Text style={styles.helper}>{chambersError}</Text>}
+        {!loadingChambers && !chambersError && chambers?.length === 0 && (
+          <Text style={styles.helper}>No chambers are available for your university yet.</Text>
+        )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chamberRow}>
           {(chambers ?? []).map((c) => (
             <Pressable
@@ -63,12 +89,22 @@ export default function CreatePostScreen() {
               style={[styles.chamberChip, activeSlug === c.id && styles.chamberChipActive]}
             >
               <Text style={styles.chamberEmoji}>{c.emoji}</Text>
-              <Text style={[styles.chamberLabel, activeSlug === c.id && styles.chamberLabelActive]}>{c.name}</Text>
+              <View>
+                <Text style={[styles.chamberLabel, activeSlug === c.id && styles.chamberLabelActive]}>{c.name}</Text>
+                <Text style={styles.chamberHint}>{c.joined || joinedSlug === c.id ? 'Joined' : 'Recommended'}</Text>
+              </View>
             </Pressable>
           ))}
         </ScrollView>
 
-        <Field label="Title" placeholder="What's on your mind?" value={title} onChangeText={setTitle} />
+        {activeChamber && !activeChamberJoined && (
+          <Pressable style={styles.joinButton} onPress={joinSelectedChamber} disabled={joining}>
+            {joining ? <ActivityIndicator color={colors.primary} size="small" /> : <Ionicons name="people-outline" size={17} color={colors.primary} />}
+            <Text style={styles.joinText}>{joining ? 'Joining…' : `Join ${activeChamber.name}`}</Text>
+          </Pressable>
+        )}
+
+        <Field label={isDiscussion ? 'Question or topic' : 'Title'} placeholder={isDiscussion ? 'What would you like to discuss?' : "What's on your mind?"} value={title} onChangeText={setTitle} />
 
         <Text style={styles.label}>Details</Text>
         <TextInput
@@ -95,7 +131,7 @@ export default function CreatePostScreen() {
           </Pressable>
         )}
 
-        <Button label={submitting ? 'Posting…' : 'Post'} onPress={submit} style={{ marginTop: spacing.lg }} />
+        <Button label={submitting ? 'Posting…' : isDiscussion ? 'Start Discussion' : 'Post'} onPress={submit} style={{ marginTop: spacing.lg }} disabled={!activeChamberJoined || submitting} />
         {submitting && <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />}
       </ScrollView>
     </SafeAreaView>
@@ -116,6 +152,10 @@ const styles = themedStyles((colors) => ({
   chamberEmoji: { fontSize: 15 },
   chamberLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   chamberLabelActive: { color: colors.primary },
+  chamberHint: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
+  helper: { fontSize: 12, color: colors.textMuted, marginBottom: spacing.md },
+  joinButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.md, marginTop: -spacing.md, marginBottom: spacing.lg },
+  joinText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   bodyInput: {
     height: 100, textAlignVertical: 'top', padding: spacing.lg, fontSize: 15, color: colors.text,
     backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.md,

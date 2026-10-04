@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, radii, spacing, shadow, themedStyles } from '@/theme';
 import { Card } from '@/components/ui/Card';
 import { searchAll } from '@/lib/api/ai';
@@ -10,24 +10,34 @@ import { resolveAccent } from '@/lib/colorKey';
 import { searchExamples } from '@/data/mock';
 export default function AiSearchScreen() {
   const router = useRouter();
+  const { q: initialQuery } = useLocalSearchParams();
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [interpretation, setInterpretation] = useState('');
   const [results, setResults] = useState([]);
-  const run = async (q) => {
+  const [error, setError] = useState('');
+  const run = useCallback(async (q) => {
     if (!q.trim()) return;
     setQuery(q);
     setSubmitted(true);
     setLoading(true);
+    setError('');
     try {
       const data = await searchAll(q);
       setInterpretation(data.interpretation);
       setResults(data.results);
+    } catch {
+      setError('Search is unavailable right now. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+  useEffect(() => {
+    // Route params arrive after mount; run() synchronizes the initial search request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (typeof initialQuery === 'string' && initialQuery.trim()) run(initialQuery.trim());
+  }, [initialQuery, run]);
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
@@ -116,6 +126,7 @@ export default function AiSearchScreen() {
             )}
             {!loading && (
               <>
+                {!!error && <Text accessibilityRole="alert" style={styles.errorText}>{error}</Text>}
                 <Text style={styles.resultsCount}>{results.length} results</Text>
                 {results.map((r) => {
                   const { color, soft } = resolveAccent(r.colorKey);
@@ -273,6 +284,7 @@ const styles = themedStyles((colors) => ({
     fontSize: 12.5,
     color: colors.text,
   },
+  errorText: { color: colors.red, fontSize: 13, marginHorizontal: spacing.lg, marginTop: spacing.md },
   resultsCount: {
     fontSize: 12.5,
     color: colors.textMuted,

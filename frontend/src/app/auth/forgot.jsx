@@ -10,11 +10,13 @@ import { Button } from '@/components/ui/Button';
 import { ClaySurface } from '@/components/ui/ClaySurface';
 import { forgotPassword } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
+import { UniversityPicker } from '@/components/auth/UniversityPicker';
 
 export default function ForgotScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [studentId, setStudentId] = useState('');
+  const [universitySlug, setUniversitySlug] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,11 +28,12 @@ export default function ForgotScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      const { devCode } = await forgotPassword(studentId.trim());
+      const { devCode } = await forgotPassword(studentId.trim(), universitySlug || undefined);
       router.push({
         pathname: '/auth/verify',
         params: {
           studentId: studentId.trim(),
+          universitySlug,
           devCode: devCode ?? '',
         },
       });
@@ -64,6 +67,7 @@ export default function ForgotScreen() {
 
         <View style={styles.sheetWrap}>
           <ClaySurface radius={radii.xxl} style={styles.sheet}>
+            <UniversityPicker value={universitySlug} onChange={setUniversitySlug} />
             <Field
               label="Student / Registration Number"
               icon="id-card-outline"

@@ -34,7 +34,8 @@ export default function ReelsScreen() {
   useFocusEffect(
     useCallback(() => {
       refetchStories();
-    }, [refetchStories]),
+      refetch();
+    }, [refetchStories, refetch]),
   );
 
   // Deep-linked from a profile grid tile — jump straight to that reel once loaded.
@@ -44,7 +45,6 @@ export default function ReelsScreen() {
     if (index === -1) return;
     focusedRef.current = true;
     scrollRef.current?.scrollTo({ y: index * reelHeight, animated: false });
-    setActiveIndex(index);
   }, [focusId, reels, reelHeight]);
 
   const onStoryPress = (s) => {

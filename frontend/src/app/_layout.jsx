@@ -5,12 +5,12 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, useTheme, colors as staticColors, radii, spacing } from '@/theme';
-
-const FRAME_MARGIN = spacing.md;
-const FRAME_RADIUS = radii.xl;
 import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
 import { NotificationsProvider } from '@/lib/notifications/NotificationsContext';
 import { NotificationToast } from '@/components/NotificationToast';
+
+const FRAME_MARGIN = spacing.md;
+const FRAME_RADIUS = radii.xl;
 
 /** Redirects between the auth stack and the app shell based on session state. */
 function AuthGate({ children }) {
@@ -43,7 +43,7 @@ function AuthGate({ children }) {
   return <>{children}</>;
 }
 function RootNavigator() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   return (
     <View
       style={{

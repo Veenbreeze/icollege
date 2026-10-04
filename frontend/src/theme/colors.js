@@ -136,6 +136,14 @@ export const chamberThemes = {
     color: '#2D9CDB',
     soft: '#E4F2FB',
   },
+  ai: {
+    color: '#7856D8',
+    soft: '#EEE9FB',
+  },
+  media: {
+    color: '#C24C78',
+    soft: '#F9E8EF',
+  },
 };
 export const spacing = {
   xs: 4,

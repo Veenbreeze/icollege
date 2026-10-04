@@ -19,37 +19,42 @@ function relativeUploadPath(file) {
 }
 
 reelsRouter.get('/stories', asyncHandler(async (req, res) => {
-  res.json(await reelsService.listStories(req.user.id));
+  res.json(await reelsService.listStories(req.user));
 }));
 
 reelsRouter.post('/stories', uploadStory.single('media'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No media uploaded');
-  res.status(201).json(await reelsService.createStory(req.user.id, relativeUploadPath(req.file)));
+  res.status(201).json(await reelsService.createStory(req.user, relativeUploadPath(req.file), req.body.visibility));
 }));
 
 reelsRouter.post('/stories/:id/view', asyncHandler(async (req, res) => {
-  res.json(await reelsService.markStoryViewed(numericId(req.params.id), req.user.id));
+  const result = await reelsService.markStoryViewed(numericId(req.params.id), req.user);
+  if (!result) throw new HttpError(404, 'Story not found');
+  res.json(result);
 }));
 
 reelsRouter.get('/reels', asyncHandler(async (req, res) => {
-  res.json(await reelsService.listReels(req.user.id));
+  res.json(await reelsService.listReels(req.user));
 }));
 
 reelsRouter.get('/users/me/reels', asyncHandler(async (req, res) => {
-  res.json(await reelsService.listReelsByAuthor(req.user.id, req.user.id));
+  res.json(await reelsService.listReelsByAuthor(req.user));
 }));
 
 reelsRouter.post('/reels', uploadReel.single('media'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No media uploaded');
-  const { caption, chamberId } = req.body;
-  const reel = await reelsService.createReel(req.user.id, { caption, mediaPath: relativeUploadPath(req.file), chamberId: chamberId ? numericId(chamberId) : null });
+  const { caption, chamberId, visibility } = req.body;
+  const reel = await reelsService.createReel(req.user, { caption, mediaPath: relativeUploadPath(req.file), chamberId: chamberId ? numericId(chamberId) : null, visibility });
+  if (!reel) throw new HttpError(404, 'Chamber not found or not available to you');
   res.status(201).json(reel);
 }));
 
 reelsRouter.post('/reels/:id/like', asyncHandler(async (req, res) => {
-  res.json(await reelsService.toggleReelLike(numericId(req.params.id), req.user.id));
+  res.json(await reelsService.toggleReelLike(numericId(req.params.id), req.user));
 }));
 
 reelsRouter.post('/reels/:id/share', asyncHandler(async (req, res) => {
-  res.json(await reelsService.incrementReelShares(numericId(req.params.id), req.user.id));
+  const result = await reelsService.incrementReelShares(numericId(req.params.id), req.user);
+  if (!result.shares) throw new HttpError(404, 'Reel not found');
+  res.json(result);
 }));

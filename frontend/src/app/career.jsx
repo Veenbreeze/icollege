@@ -13,9 +13,9 @@ import { resolveAccent } from '@/lib/colorKey';
 import { opportunityCategories } from '@/data/mock';
 export default function CareerScreen() {
   const router = useRouter();
-  const { saved: savedParam } = useLocalSearchParams();
+  const { saved: savedParam, tab: initialTab } = useLocalSearchParams();
   const onlySaved = savedParam === '1';
-  const [tab, setTab] = useState('opps');
+  const [tab, setTab] = useState(initialTab === 'projects' ? 'projects' : 'opps');
   const [cat, setCat] = useState('All');
   const [query, setQuery] = useState('');
   const { data: opportunities, isLoading: loadingOpps } = useApi(() => fetchOpportunities(cat), [cat]);

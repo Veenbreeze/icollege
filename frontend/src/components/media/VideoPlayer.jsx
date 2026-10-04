@@ -11,10 +11,13 @@ export function VideoPlayer({ uri, isActive = false, muted = false, loop = false
   });
 
   useEffect(() => {
+    // Expo's player is an imperative external instance, so sync its property in an effect.
+    // eslint-disable-next-line react-hooks/immutability
     player.muted = muted;
   }, [player, muted]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     player.loop = loop;
   }, [player, loop]);
 
